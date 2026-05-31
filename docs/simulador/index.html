@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Documentación visual — Banco híbrido</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html" class="activo">Inicio</a>
+    <a href="interactivo.html">Simulador</a>
+    <a href="funciones.html">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html">Árbol R-N</a>
+    <a href="rbt-casos.html">Casos R-N</a>
+    <a href="ordenamiento-punteros.html">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor">
+    <h1>Documentación interactiva</h1>
+    <p class="subtitulo">
+      Guía visual de la capa de datos del proyecto: tabla hash con árboles rojo-negro por balde
+      y reporte ordenado solo con el puntero <code>siguiente</code> en <code>NodoHibrido</code>.
+      Réplica en JavaScript alineada con el código Java en <code>src/datos/</code>.
+    </p>
+
+    <div class="hero-cards">
+      <a href="interactivo.html" class="tarjeta destacada" style="text-decoration:none;color:inherit">
+        <div class="icono">⚡</div>
+        <h3>Simulador interactivo</h3>
+        <p style="color:var(--muted);font-size:0.9rem">
+          Hash, RBT y reporte; escenarios prearmados para animar el MergeSort al instante.
+        </p>
+      </a>
+
+      <a href="funciones.html" class="tarjeta" style="text-decoration:none;color:inherit">
+        <div class="icono">🔗</div>
+        <h3>Mapa de funciones</h3>
+        <p style="color:var(--muted);font-size:0.9rem">
+          Qué método llama a cuál al insertar, buscar, eliminar o generar el reporte.
+        </p>
+      </a>
+
+      <a href="arbol-rojo-negro.html" class="tarjeta" style="text-decoration:none;color:inherit">
+        <div class="icono">🌳</div>
+        <h3>Árbol rojo-negro</h3>
+        <p style="color:var(--muted);font-size:0.9rem">
+          Simulador paso a paso. Diagramas por caso en la tarjeta «Casos rojo-negro».
+        </p>
+      </a>
+
+      <a href="rbt-casos.html" class="tarjeta" style="text-decoration:none;color:inherit">
+        <div class="icono">📕</div>
+        <h3>Casos rojo-negro</h3>
+        <p style="color:var(--muted);font-size:0.9rem">
+          Inserción, rotaciones y eliminación agrupados; ver antes → después en cada caso.
+        </p>
+      </a>
+
+      <a href="ordenamiento-punteros.html" class="tarjeta" style="text-decoration:none;color:inherit">
+        <div class="icono">📋</div>
+        <h3>Ordenamiento con punteros</h3>
+        <p style="color:var(--muted);font-size:0.9rem">
+          Solo MergeSort por <code>siguiente</code> (el reporte completo está en el simulador).
+        </p>
+      </a>
+    </div>
+
+    <h2>Arquitectura en una imagen</h2>
+    <div class="tarjeta">
+      <pre style="margin:0;font-size:0.85rem;line-height:1.6">
+  Cliente  ──►  NodoHibrido  ◄──┬── Canal árbol: izquierdo, derecho, padre, esRojo
+                                └── Canal reporte: siguiente
+
+  BancoEstructura
+       │
+       ├── TablaHash          casilleros[i] → raíz RBT del balde i
+       ├── ArbolRojoNegro     buscar / insertar / eliminar por balde
+       └── ReporteLista       inorden + mergeSortLista (solo siguiente)
+      </pre>
+    </div>
+
+    <p class="nota">
+      Abre cualquier página con doble clic o sirve la carpeta:
+      <code>python3 -m http.server 8080</code> desde <code>docs/simulador/</code>
+      y visita <code>http://localhost:8080</code>.
+    </p>
+  </main>
+</body>
+</html>

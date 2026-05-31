@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Árbol rojo-negro — Simulador</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html">Inicio</a>
+    <a href="interactivo.html">Simulador</a>
+    <a href="funciones.html">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html" class="activo">Árbol R-N</a>
+    <a href="rbt-casos.html">Casos R-N</a>
+    <a href="ordenamiento-punteros.html">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor">
+    <h1>Árbol rojo-negro — simulador</h1>
+    <p class="subtitulo">
+      Recorrido paso a paso alineado con <code>ArbolRojoNegro.java</code> (sin tabla hash).
+      Para ver cada caso con diagramas antes/después abre la
+      <a href="rbt-casos.html">guía de casos R-N</a>.
+    </p>
+
+    <p class="nota-enlace">
+      <strong>Tip:</strong> desde la guía puedes abrir este simulador con una secuencia ya cargada
+      (enlace «Probar en simulador»).
+    </p>
+
+    <div id="reproductor"></div>
+
+    <div class="zona-animacion">
+      <div class="canvas-contenedor">
+        <canvas id="canvasRbt" class="canvas-arbol" data-altura-logica="480"></canvas>
+      </div>
+      <div class="leyenda">
+        <span class="l-rojo">Rojo</span>
+        <span class="l-negro">Negro</span>
+        <span>Caja ámbar = puntero <strong>actual</strong></span>
+        <span>Verde = siguiente hijo en la comparación</span>
+        <span>Cian = clave buscada / insertada</span>
+        <span>Lila = pivote de rotación</span>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:1rem">
+      <h3 style="margin-top:0">Valores a insertar</h3>
+      <div class="fila-form">
+        <div style="grid-column: 1 / -1">
+          <label for="secuencia">Cuentas (separadas por coma)</label>
+          <input type="text" id="secuencia" value="10, 5, 15, 3" />
+        </div>
+      </div>
+      <div class="grupo-botones">
+        <button type="button" class="btn btn-primario" id="btnAnimar">Animar inserción</button>
+        <button type="button" class="btn btn-secundario" id="btnPreset1">Preset: 50, 30, 70</button>
+        <button type="button" class="btn btn-secundario" id="btnPreset2">Preset: 10, 20, 30</button>
+        <button type="button" class="btn btn-peligro" id="btnLimpiar">Limpiar</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/nucleo.js"></script>
+  <script src="js/canvas-hd.js"></script>
+  <script src="js/serializacion.js"></script>
+  <script src="js/motor-animacion.js"></script>
+  <script src="js/vista.js"></script>
+  <script src="js/reproductor.js"></script>
+  <script>
+    const BD = window.BancoDoc;
+    const BA = window.BancoAnim;
+    const BV = window.BancoVista;
+    const canvas = document.getElementById("canvasRbt");
+    const inputSecuencia = document.getElementById("secuencia");
+    const ui = { canvas, hashEl: null, listaEl: null };
+
+    let ultimoPaso = null;
+
+    const reproductor = new ReproductorVisual({
+      contenedor: document.getElementById("reproductor"),
+      alPaso: (paso) => {
+        ultimoPaso = paso;
+        return BV.aplicarPaso(paso, ui, { instantaneo: true });
+      },
+    });
+
+    BancoCanvas.observar(
+      canvas,
+      () => {
+        if (ultimoPaso) BV.aplicarPaso(ultimoPaso, ui, { instantaneo: true });
+        else BD.dibujarArbol(canvas, null, { instantaneo: true });
+      },
+      480
+    );
+
+    function parseSecuencia(txt) {
+      return txt.split(/[,;\s]+/).map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+    }
+
+    function animar(txt) {
+      const nums = parseSecuencia(txt);
+      if (!nums.length) return;
+      const r = BA.animarSoloRBT(nums);
+      reproductor.cargarPasos(r.pasos).then(() => reproductor.reproducir());
+    }
+
+    document.getElementById("btnAnimar").onclick = () => animar(inputSecuencia.value);
+    document.getElementById("btnPreset1").onclick = () => {
+      inputSecuencia.value = "50, 30, 70";
+      animar("50, 30, 70");
+    };
+    document.getElementById("btnPreset2").onclick = () => {
+      inputSecuencia.value = "10, 20, 30";
+      animar("10, 20, 30");
+    };
+    document.getElementById("btnLimpiar").onclick = () => {
+      ultimoPaso = null;
+      reproductor.cargarPasos([]);
+      BD.dibujarArbol(canvas, null, { instantaneo: true });
+    };
+
+    const params = new URLSearchParams(location.search);
+    const seq = params.get("seq");
+    if (seq) {
+      inputSecuencia.value = seq;
+      animar(seq);
+    } else {
+      BD.dibujarArbol(canvas, null, { instantaneo: true });
+    }
+  </script>
+</body>
+</html>

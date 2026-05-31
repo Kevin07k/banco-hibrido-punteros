@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador — Banco híbrido</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html">Inicio</a>
+    <a href="interactivo.html" class="activo">Simulador</a>
+    <a href="funciones.html">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html">Árbol R-N</a>
+    <a href="rbt-casos.html">Casos R-N</a>
+    <a href="ordenamiento-punteros.html">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor">
+    <h1>Simulador paso a paso</h1>
+    <p class="subtitulo">
+      Inspirado en la <a href="https://www.cs.usfca.edu/~galles/visualization/RedBlack.html" target="_blank" rel="noopener">visualización RBT de USFCA</a>,
+      en español: cada decisión (hash, comparar, rotar, fusionar) es un paso que puedes
+      <strong>pausar</strong>, avanzar, retroceder o reproducir automáticamente.
+    </p>
+
+    <div id="reproductor"></div>
+
+    <div class="zona-animacion">
+      <h2 style="margin-top:0">Tabla hash</h2>
+      <div id="hashViz" class="tabla-hash"></div>
+
+      <div class="grid-2" style="margin-top:1rem">
+        <section>
+          <h3>Árbol del balde</h3>
+          <div class="pills" id="pillsBalde"></div>
+          <div class="canvas-contenedor">
+            <canvas id="canvasArbol" class="canvas-arbol" data-altura-logica="440"></canvas>
+          </div>
+          <p class="leyenda">
+            <span class="l-rojo">Rojo</span>
+            <span style="margin-left:1rem">Caja ámbar <strong>actual</strong> → nodo del puntero</span>
+            <span style="margin-left:1rem">Verde = arista siguiente (izq/der)</span>
+            <span style="margin-left:1rem">Cian = clave buscada</span>
+          </p>
+        </section>
+        <section class="seccion-reporte">
+          <h3>Reporte — MergeSort</h3>
+          <p class="nota reporte-intro">
+            Arriba: recursión <code>mergeSortLista</code>. Abajo: lista con <code>siguiente</code> en ese momento.
+          </p>
+          <div id="mergeAyuda" class="merge-ayuda" hidden>
+            <span class="merge-ayuda-tipo" id="mergeAyudaTipo">Paso</span>
+            <strong id="mergeAyudaTitulo"></strong>
+            <p id="mergeAyudaDetalle"></p>
+          </div>
+          <div class="canvas-contenedor canvas-merge-wrap">
+            <canvas id="canvasMerge" class="canvas-arbol canvas-merge" data-altura-logica="400"></canvas>
+          </div>
+          <ul class="leyenda-merge-lista">
+            <li><span class="leyenda-cuadro" style="background:#38bdf8"></span> Sublista que se procesa ahora</li>
+            <li><span class="leyenda-cuadro" style="background:#22c55e"></span> Cuenta tomada al fusionar</li>
+            <li><span class="leyenda-cuadro" style="background:#fbbf24"></span> Ya dividida en izquierda | derecha</li>
+            <li><span class="leyenda-cuadro" style="background:#a5b4fc"></span> Comparando dos sublistas</li>
+          </ul>
+          <h4 class="subtitulo-seccion">Lista enlazada (<code>siguiente</code>)</h4>
+          <div id="listaReporte" class="lista-enlazada lista-reporte-scroll"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="tarjeta panel-escenarios" style="margin-top:1rem">
+      <h3 style="margin-top:0">Escenarios listos (ver el reporte sin armar a mano)</h3>
+      <p class="nota" style="margin-top:0">
+        Carga un bosque hash + árboles RBT ya construido. Después solo animas
+        <strong>inorden + MergeSort</strong> con «Reporte (animar)» o el botón de abajo.
+      </p>
+      <div class="escenario-layout">
+        <div class="escenario-campo">
+          <label for="selEscenario">Escenario</label>
+          <select id="selEscenario" class="select-escenario"></select>
+        </div>
+        <div class="escenario-resumen">
+          <span class="escenario-resumen-label">Qué incluye</span>
+          <p id="descEscenario" class="desc-escenario">—</p>
+        </div>
+      </div>
+      <div class="grupo-botones">
+        <button type="button" class="btn btn-secundario" id="btnCargarEscenario">Cargar escenario</button>
+        <button type="button" class="btn btn-primario" id="btnReporteEscenario">Cargar y animar reporte</button>
+      </div>
+    </section>
+
+    <div class="grid-2" style="margin-top:1rem">
+      <section class="tarjeta">
+        <h3 style="margin-top:0">Operaciones manuales</h3>
+        <div class="fila-form">
+          <div>
+            <label for="cuenta">Cuenta</label>
+            <input type="number" id="cuenta" value="1001" min="1" />
+          </div>
+          <div>
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" value="Carlos Ruiz" />
+          </div>
+          <div>
+            <label for="tipo">Tipo</label>
+            <input type="text" id="tipo" value="Corriente" />
+          </div>
+          <div>
+            <label for="saldo">Saldo</label>
+            <input type="number" id="saldo" value="3200" step="0.01" />
+          </div>
+          <div>
+            <label for="tamHash">Tamaño tabla</label>
+            <select id="tamHash">
+              <option value="7" selected>7 (demo)</option>
+              <option value="11">11</option>
+              <option value="101">101 (proyecto)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-botones">
+          <button type="button" class="btn btn-primario" id="btnInsertar">Insertar (animar)</button>
+          <button type="button" class="btn btn-secundario" id="btnBuscar">Buscar (animar)</button>
+          <button type="button" class="btn btn-secundario" id="btnReporte">Reporte (animar)</button>
+          <button type="button" class="btn btn-secundario" id="btnDemo">Demo Main.java</button>
+          <button type="button" class="btn btn-peligro" id="btnReset">Reiniciar todo</button>
+        </div>
+        <p id="msg" class="nota" style="margin-bottom:0"></p>
+      </section>
+      <section class="tarjeta">
+        <h3 style="margin-top:0">Fórmula</h3>
+        <pre id="formula" class="codigo" style="margin:0">indice = cuenta % tamaño</pre>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/nucleo.js"></script>
+  <script src="js/canvas-hd.js"></script>
+  <script src="js/serializacion.js"></script>
+  <script src="js/merge-sort-viz.js"></script>
+  <script src="js/escenarios.js"></script>
+  <script src="js/motor-animacion.js"></script>
+  <script src="js/arbol-transicion.js"></script>
+  <script src="js/vista.js"></script>
+  <script src="js/reproductor.js"></script>
+  <script>
+    const BD = window.BancoDoc;
+    const BS = window.BancoSerial;
+    const BA = window.BancoAnim;
+    const BV = window.BancoVista;
+    const BancoMergeViz = window.BancoMergeViz;
+    const BE = window.BancoEscenarios;
+
+    let casilleros = [];
+    let tamano = 7;
+    let baldeActivo = 0;
+    let resultadoPendiente = null;
+
+    const el = (id) => document.getElementById(id);
+    const canvasArbol = el("canvasArbol");
+    const ui = {
+      hashEl: el("hashViz"),
+      canvas: canvasArbol,
+      canvasMerge: el("canvasMerge"),
+      listaEl: el("listaReporte"),
+      formulaEl: el("formula"),
+      tamano: 7,
+    };
+
+    function redibujarArbolActual(instant) {
+      BD.dibujarArbol(canvasArbol, casilleros[baldeActivo], instant ? { instantaneo: true } : {});
+    }
+
+    let ultimoPasoVista = null;
+
+    BancoCanvas.observar(canvasArbol, () => {
+      if (ultimoPasoVista?.casilleros) BV.aplicarPaso(ultimoPasoVista, ui, { instantaneo: true });
+      else redibujarArbolActual(true);
+    }, 440);
+
+    BancoCanvas.observar(el("canvasMerge"), () => {
+      const c = el("canvasMerge");
+      if (ultimoPasoVista?.mergeArbol) {
+        BancoMergeViz.pintarArbolMerge(c, ultimoPasoVista.mergeArbol, { instantaneo: true });
+      } else {
+        BancoMergeViz.pintarArbolMerge(c, null, { instantaneo: true });
+      }
+    }, 400);
+
+    function aplicarResultadoFinal() {
+      if (!resultadoPendiente) return;
+      if (resultadoPendiente.ok && resultadoPendiente.casilleros) {
+        casilleros = BS.sincronizarRaices(resultadoPendiente.casilleros);
+        refrescarEstatico();
+      }
+    }
+
+    const reproductor = new ReproductorVisual({
+      contenedor: el("reproductor"),
+      alPaso: (paso, _i, opts) => {
+        ultimoPasoVista = paso;
+        ui.tamano = tamano;
+        if (paso.balde != null) baldeActivo = paso.balde;
+        if (paso.hashIdx >= 0) baldeActivo = paso.hashIdx;
+        actualizarPills();
+        actualizarAyudaReporte(paso);
+        return BV.aplicarPaso(paso, ui, opts);
+      },
+      alTerminar: aplicarResultadoFinal,
+    });
+
+    function initTabla(t) {
+      reproductor.pausar();
+      tamano = t;
+      ui.tamano = t;
+      casilleros = new Array(t).fill(null);
+      baldeActivo = 0;
+      resultadoPendiente = null;
+      reproductor.cargarPasos([]);
+      BV.reiniciarCanvasAnimacion(ui);
+      refrescarEstatico();
+      el("msg").textContent = "";
+    }
+
+    function refrescarEstatico() {
+      ui.hashEl.innerHTML = BD.renderHash(casilleros, -1);
+      actualizarPills();
+      redibujarArbolActual(true);
+      el("formula").textContent = "indice = cuenta % " + tamano;
+    }
+
+    function actualizarPills() {
+      const cont = el("pillsBalde");
+      cont.innerHTML = "";
+      for (let i = 0; i < tamano; i++) {
+        const p = document.createElement("button");
+        p.type = "button";
+        p.className = "pill" + (i === baldeActivo ? " activa" : "");
+        p.textContent = "[" + i + "]";
+        p.onclick = () => {
+          baldeActivo = i;
+          actualizarPills();
+          redibujarArbolActual();
+        };
+        cont.appendChild(p);
+      }
+    }
+
+    el("hashViz").addEventListener("click", (e) => {
+      const cas = e.target.closest(".casillero");
+      if (!cas) return;
+      baldeActivo = parseInt(cas.dataset.idx, 10);
+      actualizarPills();
+      redibujarArbolActual();
+    });
+
+    function cargarAnimacion(pasos, resultado) {
+      resultadoPendiente = resultado;
+      BV.reiniciarCanvasAnimacion(ui);
+      const prom = reproductor.cargarPasos(pasos);
+      if (pasos.length) {
+        prom.then(() => reproductor.reproducir());
+      }
+    }
+
+    function clienteForm() {
+      return {
+        cuenta: parseInt(el("cuenta").value, 10),
+        nombre: el("nombre").value,
+        tipo: el("tipo").value,
+        saldo: parseFloat(el("saldo").value),
+      };
+    }
+
+    el("btnInsertar").addEventListener("click", () => {
+      const c = clienteForm();
+      const r = BA.animarInsertar(casilleros, tamano, c);
+      if (r.ok) el("msg").textContent = "Reproduce los pasos; al final se aplica la inserción.";
+      else el("msg").textContent = "Cuenta duplicada (ver paso final).";
+      cargarAnimacion(r.pasos, r);
+    });
+
+    el("btnBuscar").addEventListener("click", () => {
+      const cuenta = parseInt(el("cuenta").value, 10);
+      const r = BA.animarBuscar(casilleros, tamano, cuenta);
+      el("msg").textContent = r.encontrado ? "Encontrado — revisa el recorrido." : "No encontrado.";
+      cargarAnimacion(r.pasos, { ok: false });
+    });
+
+    function hayClientes() {
+      return casilleros.some((r) => r != null);
+    }
+
+    function actualizarAyudaReporte(paso) {
+      const panel = el("mergeAyuda");
+      if (!panel) return;
+      const esReporte =
+        paso &&
+        (paso.tipo === "merge" || paso.tipo === "encadenar" || paso.mergeArbol || paso.listaIds);
+      if (!esReporte) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+      const tipo =
+        paso.tipo === "encadenar"
+          ? "Fase 1 · Inorden"
+          : paso.tipo === "merge"
+            ? "Fase 2 · MergeSort"
+            : "Reporte";
+      el("mergeAyudaTipo").textContent = tipo;
+      el("mergeAyudaTitulo").textContent = paso.titulo || paso.decision || "";
+      el("mergeAyudaDetalle").textContent = paso.detalle || paso.decision || "";
+    }
+
+    function animarReporteActual() {
+      if (!hayClientes()) {
+        el("msg").textContent = "Primero carga un escenario o inserta clientes.";
+        return;
+      }
+      const r = BA.animarReporte(casilleros, tamano);
+      el("msg").textContent = "Reporte: inorden por balde + MergeSort (solo puntero siguiente).";
+      cargarAnimacion(r.pasos, { ok: true, casilleros: r.casilleros });
+    }
+
+    el("btnReporte").addEventListener("click", animarReporteActual);
+
+    function escenarioSeleccionado() {
+      return BE.obtener(el("selEscenario").value);
+    }
+
+    function actualizarDescEscenario() {
+      const esc = escenarioSeleccionado();
+      el("descEscenario").textContent = esc.descripcion;
+    }
+
+    function poblarSelectEscenarios() {
+      const sel = el("selEscenario");
+      sel.innerHTML = BE.lista()
+        .map((e) => `<option value="${e.id}">${e.nombre}</option>`)
+        .join("");
+      actualizarDescEscenario();
+    }
+
+    function cargarEscenario(sinMensaje) {
+      const esc = escenarioSeleccionado();
+      reproductor.pausar();
+      reproductor.cargarPasos([]);
+      ultimoPasoVista = null;
+      resultadoPendiente = null;
+
+      if (el("tamHash").value !== String(esc.tamano)) {
+        el("tamHash").value = String(esc.tamano);
+      }
+      tamano = esc.tamano;
+      ui.tamano = tamano;
+
+      const built = BE.construirCasilleros(esc);
+      casilleros = built.casilleros;
+      baldeActivo = 0;
+      for (let i = 0; i < casilleros.length; i++) {
+        if (casilleros[i]) {
+          baldeActivo = i;
+          break;
+        }
+      }
+
+      refrescarEstatico();
+      BV.pintarListaPorIds(ui.listaEl, []);
+      BancoMergeViz.dibujarArbolMerge(ui.canvasMerge, null);
+
+      if (!sinMensaje) {
+        el("msg").textContent =
+          `«${esc.nombre}» cargado (${built.total} clientes). ${BE.resumenBaldes(casilleros)}. Pulsa «Reporte (animar)».`;
+      }
+      return esc;
+    }
+
+    el("btnCargarEscenario").addEventListener("click", () => cargarEscenario(false));
+
+    el("btnReporteEscenario").addEventListener("click", () => {
+      cargarEscenario(true);
+      animarReporteActual();
+    });
+
+    el("selEscenario").addEventListener("change", actualizarDescEscenario);
+
+    el("btnDemo").addEventListener("click", async () => {
+      initTabla(parseInt(el("tamHash").value, 10));
+      const datos = [
+        [1003, "Ana Lopez", "Ahorro", 1500.5],
+        [1001, "Carlos Ruiz", "Corriente", 3200],
+        [1002, "Maria Gomez", "Ahorro", 780.25],
+        [1204, "Pedro Diaz", "Corriente", 9100],
+      ];
+      for (const [cuenta, nombre, tipo, saldo] of datos) {
+        el("cuenta").value = cuenta;
+        const r = BA.animarInsertar(casilleros, tamano, { cuenta, nombre, tipo, saldo });
+        resultadoPendiente = r;
+        await new Promise((resolve) => {
+          const prevFin = reproductor.alTerminar;
+          reproductor.alTerminar = () => {
+            aplicarResultadoFinal();
+            reproductor.alTerminar = prevFin || aplicarResultadoFinal;
+            resolve();
+          };
+          reproductor.cargarPasos(r.pasos).then(() => reproductor.reproducir());
+        });
+      }
+      el("msg").textContent = "Demo completa. Prueba «Reporte (animar)».";
+      refrescarEstatico();
+    });
+
+    el("btnReset").addEventListener("click", () => initTabla(parseInt(el("tamHash").value, 10)));
+    el("tamHash").addEventListener("change", () => {
+      if (!hayClientes()) initTabla(parseInt(el("tamHash").value, 10));
+    });
+
+    poblarSelectEscenarios();
+    el("selEscenario").value = "demo";
+    cargarEscenario(false);
+  </script>
+</body>
+</html>

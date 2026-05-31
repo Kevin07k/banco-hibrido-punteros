@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ordenamiento con punteros — Banco híbrido</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html">Inicio</a>
+    <a href="interactivo.html">Simulador</a>
+    <a href="funciones.html">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html">Árbol R-N</a>
+    <a href="rbt-casos.html">Casos R-N</a>
+    <a href="ordenamiento-punteros.html" class="activo">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor">
+    <h1>Ordenamiento con <code>siguiente</code></h1>
+    <p class="subtitulo">
+      Esta página muestra <strong>solo la fase 2 del reporte</strong>:
+      <code>mergeSortLista</code> ordena una lista enlazada usando únicamente el puntero
+      <code>siguiente</code> (tortuga/liebre, recursión y fusión).
+    </p>
+
+    <div class="tarjeta nota-enlace">
+      <strong>¿Y el hash, el árbol y el inorden?</strong>
+      Eso es la <em>fase 1</em> (armar la lista desde los baldes). Está en el
+      <a href="interactivo.html">simulador completo</a> → botón <strong>Reporte (animar)</strong>.
+      Aquí asumimos que la lista ya existe, como cuando termina el inorden.
+    </div>
+
+    <div class="tarjeta panel-orden">
+      <h3 style="margin-top:0">Lista de prueba (orden de entrada)</h3>
+      <p class="nota" style="margin-top:0">
+        Escribe cuentas en el orden en que quieres encadenarlas <em>antes</em> de ordenar.
+        No hace falta que estén ordenadas — para eso sirve el MergeSort.
+      </p>
+      <label for="oCuentas" class="label-campo">Cuentas</label>
+      <input
+        type="text"
+        id="oCuentas"
+        class="input-orden"
+        value="1003, 1001, 1002, 1204"
+        spellcheck="false"
+        autocomplete="off"
+      />
+
+      <div class="grupo-botones" style="margin-top:1rem">
+        <button type="button" class="btn btn-primario" id="oPrevisualizar">Ver lista</button>
+        <button type="button" class="btn btn-secundario" id="oAnimar">Animar MergeSort</button>
+        <button type="button" class="btn btn-secundario" id="oDemo">Demo</button>
+        <button type="button" class="btn btn-peligro" id="oReset">Limpiar</button>
+      </div>
+      <p id="oMsg" class="nota o-msg"></p>
+      <p id="oPreview" class="o-preview"></p>
+    </div>
+
+    <div id="reproductor"></div>
+
+    <div class="zona-animacion zona-orden">
+      <div class="fase-indicador">
+        <span class="fase-chip">MergeSort</span>
+        <span>Solo puntero <code>siguiente</code> — sin tocar izquierdo/derecho del árbol</span>
+      </div>
+
+      <h3 style="margin-top:0">Árbol de recursión</h3>
+      <div class="canvas-contenedor canvas-merge-wrap">
+        <canvas id="canvasMerge" class="canvas-arbol canvas-merge" data-altura-logica="460"></canvas>
+      </div>
+      <ul class="leyenda-merge-lista">
+        <li><span class="leyenda-cuadro" style="background:#38bdf8"></span> Sublista que se procesa</li>
+        <li><span class="leyenda-cuadro" style="background:#22c55e"></span> Cuenta tomada al fusionar</li>
+        <li><span class="leyenda-cuadro" style="background:#fbbf24"></span> Dividida en izquierda | derecha</li>
+      </ul>
+
+      <h4 class="subtitulo-seccion">Lista (<code>siguiente</code>)</h4>
+      <div id="listaOrd" class="lista-enlazada lista-reporte-scroll"></div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:1.5rem">
+      <h3 style="margin-top:0">Algoritmo (como en Java)</h3>
+      <pre class="codigo">mergeSortLista(cabeza)
+  dividirLista(cabeza)        <span class="cmt">// lento / rápido → corta siguiente</span>
+  mergeSortLista(izquierda)
+  mergeSortLista(derecha)
+  return fusionarListas(izq, der)</pre>
+    </div>
+  </main>
+
+  <script src="js/nucleo.js"></script>
+  <script src="js/canvas-hd.js"></script>
+  <script src="js/serializacion.js"></script>
+  <script src="js/merge-sort-viz.js"></script>
+  <script src="js/motor-animacion.js"></script>
+  <script src="js/vista.js"></script>
+  <script src="js/reproductor.js"></script>
+  <script>
+    const BA = window.BancoAnim;
+    const BV = window.BancoVista;
+    const BMV = window.BancoMergeViz;
+
+    let listaIds = [];
+    const canvasMerge = document.getElementById("canvasMerge");
+    const ui = { listaEl: document.getElementById("listaOrd"), canvasMerge };
+    const elMsg = document.getElementById("oMsg");
+    const elPreview = document.getElementById("oPreview");
+
+    function parseCuentas(texto) {
+      return texto
+        .split(/[,;\s]+/)
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
+
+    function pintarLista(ids, titulo, instant) {
+      listaIds = ids;
+      BV.pintarListaPorIds(ui.listaEl, ids);
+      elPreview.textContent = ids.length
+        ? (titulo || "Lista") + ": " + ids.join(" → ")
+        : "";
+      if (!ids.length) {
+        BMV.pintarArbolMerge(canvasMerge, null);
+        return;
+      }
+      BMV.pintarArbolMerge(
+        canvasMerge,
+        {
+          id: 0,
+          valores: ids,
+          estado: "raiz",
+          activo: true,
+          resaltar: [],
+          izq: null,
+          der: null,
+        },
+        instant ? { instantaneo: true } : undefined
+      );
+    }
+
+    let ultimoPaso = null;
+
+    BancoCanvas.observar(canvasMerge, () => {
+      if (ultimoPaso?.mergeArbol) {
+        BMV.pintarArbolMerge(canvasMerge, ultimoPaso.mergeArbol, { instantaneo: true });
+      } else if (listaIds.length) {
+        pintarLista(listaIds, null, true);
+      } else {
+        BMV.pintarArbolMerge(canvasMerge, null, { instantaneo: true });
+      }
+    }, 460);
+
+    const reproductor = new ReproductorVisual({
+      contenedor: document.getElementById("reproductor"),
+      alPaso: (paso, _i, opts) => {
+        ultimoPaso = paso;
+        return BV.aplicarPaso(paso, ui, opts);
+      },
+    });
+
+    function cuentasValidas() {
+      const cuentas = parseCuentas(document.getElementById("oCuentas").value);
+      if (!cuentas.length) {
+        elMsg.textContent = "Escribe al menos una cuenta (números positivos).";
+        elMsg.className = "nota o-msg error";
+        return null;
+      }
+      elMsg.className = "nota o-msg ok";
+      return cuentas;
+    }
+
+    document.getElementById("oPrevisualizar").onclick = () => {
+      reproductor.cargarPasos([]);
+      ultimoPaso = null;
+      const cuentas = cuentasValidas();
+      if (!cuentas) return;
+      pintarLista(cuentas, "Antes de ordenar");
+      elMsg.textContent = "Lista en el orden que escribiste. Pulsa «Animar MergeSort».";
+    };
+
+    document.getElementById("oAnimar").onclick = () => {
+      const cuentas = cuentasValidas();
+      if (!cuentas) return;
+      pintarLista(cuentas, "Antes de ordenar");
+      const r = BA.animarSoloMergeSort(cuentas);
+      BV.reiniciarCanvasAnimacion(ui);
+      reproductor.cargarPasos(r.pasos).then(() => reproductor.reproducir());
+      elMsg.textContent = "Recorre con ◀ ▶ cada división y fusión. Al final la lista queda ordenada.";
+    };
+
+    document.getElementById("oDemo").onclick = () => {
+      document.getElementById("oCuentas").value = "1003, 1001, 1002, 1204";
+      reproductor.cargarPasos([]);
+      ultimoPaso = null;
+      pintarLista(parseCuentas(document.getElementById("oCuentas").value), "Antes de ordenar");
+      elMsg.textContent = "Demo lista. Pulsa «Animar MergeSort».";
+      elMsg.className = "nota o-msg";
+    };
+
+    document.getElementById("oReset").onclick = () => {
+      listaIds = [];
+      ultimoPaso = null;
+      reproductor.cargarPasos([]);
+      BV.pintarListaPorIds(ui.listaEl, []);
+      BV.reiniciarCanvasAnimacion(ui);
+      BMV.pintarArbolMerge(canvasMerge, null, { instantaneo: true });
+      elMsg.textContent = "";
+      elPreview.textContent = "";
+      document.getElementById("oCuentas").value = "";
+    };
+
+    document.getElementById("oDemo").click();
+  </script>
+</body>
+</html>

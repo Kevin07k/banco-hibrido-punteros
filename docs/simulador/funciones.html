@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mapa de funciones — Banco híbrido</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html">Inicio</a>
+    <a href="interactivo.html">Simulador</a>
+    <a href="funciones.html" class="activo">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html">Árbol R-N</a>
+    <a href="rbt-casos.html">Casos R-N</a>
+    <a href="ordenamiento-punteros.html">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor">
+    <h1>Mapa de funciones</h1>
+    <p class="subtitulo">
+      Elige una operación y recorre la cadena de llamadas <strong>paso a paso</strong>
+      (pausa, atrás, adelante). Coincide con <code>src/datos/</code>.
+    </p>
+
+    <div id="reproductor"></div>
+
+    <div class="grupo-botones" id="ops">
+      <button type="button" class="btn btn-primario" data-op="insertar">insertar</button>
+      <button type="button" class="btn btn-secundario" data-op="buscar">buscar</button>
+      <button type="button" class="btn btn-secundario" data-op="eliminar">eliminar</button>
+      <button type="button" class="btn btn-secundario" data-op="reporte">generarReporteOrdenado</button>
+      <button type="button" class="btn btn-secundario" data-op="contar">contarClientes</button>
+    </div>
+
+    <section class="tarjeta destacada" id="panelFlujo">
+      <h3 id="tituloOp" style="margin-top:0">insertar(Cliente)</h3>
+      <div class="cadena-llamadas" id="cadena"></div>
+      <div id="leyendaEstructuras" class="leyenda-estructuras" hidden>
+        <span><span class="tag-estructura fachada">Fachada</span> <code>BancoEstructura</code></span>
+        <span><span class="tag-estructura hash">Hash</span> arreglo <code>casilleros[]</code></span>
+        <span><span class="tag-estructura arbol">Árbol</span> punteros izq / der / padre / esRojo</span>
+        <span><span class="tag-estructura lista">Lista</span> puntero <code>siguiente</code></span>
+      </div>
+      <p id="descOp"></p>
+    </section>
+
+    <h2>Detalle por capa</h2>
+    <div class="grid-2">
+      <div class="tarjeta">
+        <h3 style="margin-top:0">API pública</h3>
+        <table class="tabla-fn">
+          <thead><tr><th>Clase</th><th>Método</th><th>Qué hace</th></tr></thead>
+          <tbody id="tablaPublica"></tbody>
+        </table>
+      </div>
+      <div class="tarjeta">
+        <h3 style="margin-top:0">Interno (<code>datos.interno</code>)</h3>
+        <table class="tabla-fn">
+          <thead><tr><th>Clase</th><th>Método</th><th>Qué hace</th></tr></thead>
+          <tbody id="tablaInterna"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2>Flujo visual (Mermaid)</h2>
+    <div class="tarjeta mermaid-contenedor" id="mermaidWrap">
+      <p class="nota" style="margin:0">Cargando diagrama…</p>
+    </div>
+
+    <h2>Punteros que toca cada pieza</h2>
+    <table class="tabla-fn">
+      <thead>
+        <tr><th>Componente</th><th>Punteros</th><th>No toca</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>TablaHash</code></td><td><code>casilleros[]</code> (referencia a raíz)</td><td>árbol, siguiente</td></tr>
+        <tr><td><code>ArbolRojoNegro</code></td><td><code>izquierdo</code>, <code>derecho</code>, <code>padre</code>, <code>esRojo</code></td><td><code>siguiente</code></td></tr>
+        <tr><td><code>ReporteLista</code></td><td><code>siguiente</code> (lista temporal)</td><td>no reordena el BST</td></tr>
+        <tr><td><code>BancoEstructura</code></td><td>orquesta todo + <code>cabezaReporte</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script src="js/nucleo.js"></script>
+  <script src="js/serializacion.js"></script>
+  <script src="js/motor-animacion.js"></script>
+  <script src="js/vista.js"></script>
+  <script src="js/reproductor.js"></script>
+  <script>
+    const BV = window.BancoVista;
+    const reproductor = new ReproductorVisual({
+      contenedor: document.getElementById("reproductor"),
+      alPaso: (paso, _i, opts) => {
+        return BV.aplicarPaso(paso, { cadenaFn: document.getElementById("cadena") }, opts);
+      },
+    });
+
+    const FLUJOS = {
+      insertar: {
+        titulo: "insertar(Cliente cliente)",
+        cadenaEstructura: ["fachada", "hash", "arbol", "fachada", "arbol", "hash", "lista"],
+        cadena: [
+          "BancoEstructura.insertar",
+          "TablaHash.getRaizPorCuenta",
+          "ArbolRojoNegro.buscar",
+          "new NodoHibrido(cliente)",
+          "ArbolRojoNegro.insertar",
+          "TablaHash.setRaizPorCuenta",
+          "invalidarReporte → limpiarEnlaces",
+        ],
+        desc:
+          "Hash: elige el balde. Árbol: comprueba duplicado e inserta con balanceo RBT (izq/der/padre/esRojo). " +
+          "Lista: si había reporte generado, invalidar pone siguiente = null en todo el bosque. No se usa java.util.",
+        publica: [
+          ["BancoEstructura", "insertar", "Coordina hash + árbol + invalidación de reporte", "fachada"],
+          ["BancoEstructura", "invalidarReporte (priv)", "Lista → limpiarEnlaces", "lista"],
+        ],
+        interna: [
+          ["TablaHash", "getRaizPorCuenta", "Hash → índice y raíz del balde", "hash"],
+          ["ArbolRojoNegro", "buscar", "Árbol → ¿cuenta duplicada?", "arbol"],
+          ["NodoHibrido", "new NodoHibrido", "Fachada → celda con Cliente", "fachada"],
+          ["ArbolRojoNegro", "insertar", "Árbol → insertarEnArbol + corregirInsercion", "arbol"],
+          ["TablaHash", "setRaizPorCuenta", "Hash → raíz tras rotaciones", "hash"],
+          ["ReporteLista", "limpiarEnlaces", "Lista → siguiente = null", "lista"],
+        ],
+        mermaid: `flowchart TD
+  subgraph FACHADA["Fachada — BancoEstructura / NodoHibrido"]
+    F1[BancoEstructura.insertar]
+    X[return false]
+    N[new NodoHibrido]
+  end
+  subgraph HASH["Tabla hash — casilleros[]"]
+    H1[getRaizPorCuenta]
+    H2[setRaizPorCuenta]
+  end
+  subgraph ARBOL["Árbol RBT del balde"]
+    A1{buscar duplicado}
+    A2[insertarEnArbol]
+    A3[corregirInsercion / rotaciones]
+  end
+  subgraph LISTA["Lista reporte — siguiente"]
+    L1[invalidarReporte / limpiarEnlaces]
+  end
+  F1 --> H1
+  H1 --> A1
+  A1 -->|existe| X
+  A1 -->|libre| N
+  N --> A2
+  A2 --> A3
+  A3 --> H2
+  H2 --> L1`,
+      },
+      buscar: {
+        titulo: "buscar(long cuenta)",
+        cadenaEstructura: ["fachada", "fachada", "hash", "arbol", "fachada"],
+        cadena: [
+          "BancoEstructura.buscar",
+          "buscarNodo (privado)",
+          "TablaHash.getRaizPorCuenta",
+          "ArbolRojoNegro.buscar",
+          "nodo.getDatos() o null",
+        ],
+        desc:
+          "Solo lectura: no modifica siguiente ni reestructura el árbol. Hash ubica el balde; el árbol del balde se recorre por cuenta; la fachada devuelve el Cliente.",
+        publica: [["BancoEstructura", "buscar", "Devuelve Cliente o null", "fachada"]],
+        interna: [
+          ["BancoEstructura", "buscarNodo (priv)", "Fachada → delegación interna", "fachada"],
+          ["TablaHash", "getRaizPorCuenta", "Hash → calcularIndice + casilleros[i]", "hash"],
+          ["ArbolRojoNegro", "buscar", "Árbol → izquierdo / derecho", "arbol"],
+        ],
+        mermaid: `flowchart TD
+  subgraph FACHADA["Fachada — BancoEstructura"]
+    F1[buscar cuenta]
+    F2[buscarNodo privado]
+    F3[getDatos o null]
+  end
+  subgraph HASH["Tabla hash — casilleros[]"]
+    H1[getRaizPorCuenta]
+  end
+  subgraph ARBOL["Árbol RBT del balde"]
+    A1[buscar por cuenta]
+  end
+  F1 --> F2
+  F2 --> H1
+  H1 --> A1
+  A1 --> F3`,
+      },
+      eliminar: {
+        titulo: "eliminar(long cuenta)",
+        cadenaEstructura: ["fachada", "hash", "arbol", "lista", "arbol", "hash", "lista"],
+        cadena: [
+          "BancoEstructura.eliminar",
+          "TablaHash.getRaizPorCuenta",
+          "ArbolRojoNegro.buscar",
+          "ReporteLista.desenganchar (si reporte)",
+          "ArbolRojoNegro.eliminar",
+          "TablaHash.setRaizPorCuenta",
+          "invalidarReporte → limpiarEnlaces",
+        ],
+        desc:
+          "La eliminación usa tres estructuras distintas: (1) Tabla hash para saber en qué balde está la cuenta, " +
+          "(2) árbol RBT de ese balde para localizar y borrar el nodo, (3) lista con puntero siguiente solo si había un reporte generado. " +
+          "Desenganchar no borra del árbol; eliminar del RBT no rompe el hash; invalidar limpia siguiente en todo el bosque.",
+        publica: [
+          ["BancoEstructura", "eliminar", "Coordina hash + árbol + lista", "fachada"],
+          ["BancoEstructura", "invalidarReporte (priv)", "Lista → limpiarEnlaces", "lista"],
+        ],
+        interna: [
+          ["TablaHash", "getRaizPorCuenta", "Hash → raíz del balde", "hash"],
+          ["ArbolRojoNegro", "buscar", "Árbol del balde → nodo objetivo", "arbol"],
+          ["ReporteLista", "desenganchar", "Lista siguiente → quitar eslabón", "lista"],
+          ["ArbolRojoNegro", "eliminar", "Árbol → borrar + corregirEliminacion", "arbol"],
+          ["TablaHash", "setRaizPorCuenta", "Hash → nueva raíz tras balanceo", "hash"],
+          ["ReporteLista", "limpiarEnlaces", "Lista → siguiente = null global", "lista"],
+        ],
+        mermaid: `flowchart TD
+  subgraph HASH["Tabla hash — casilleros[]"]
+    H1[getRaizPorCuenta]
+    H2[setRaizPorCuenta]
+  end
+  subgraph ARBOL["Árbol RBT del balde"]
+    A1[buscar nodo]
+    A2[eliminar + corregirEliminacion]
+  end
+  subgraph LISTA["Lista reporte — siguiente"]
+    L1{reporteGenerado?}
+    L2[desenganchar]
+    L3[invalidarReporte / limpiarEnlaces]
+  end
+  F[BancoEstructura.eliminar] --> H1
+  H1 --> A1
+  A1 --> L1
+  L1 -->|sí| L2
+  L1 -->|no| A2
+  L2 --> A2
+  A2 --> H2
+  H2 --> L3`,
+      },
+      reporte: {
+        titulo: "generarReporteOrdenado()",
+        cadenaEstructura: ["fachada", "lista", "lista", "arbol", "lista", "lista"],
+        cadena: [
+          "BancoEstructura.generarReporteOrdenado",
+          "ReporteLista.generarOrdenado",
+          "limpiarEnlaces",
+          "recorridoInordenEncadenar (por balde)",
+          "mergeSortLista",
+          "dividirLista + fusionarListas",
+        ],
+        desc:
+          "Hash: recorre casilleros[] para visitar cada balde. Árbol: inorden con izq/der (el árbol no se destruye). " +
+          "Lista: encadena y ordena solo con siguiente (MergeSort). Los punteros del árbol quedan intactos tras ordenar.",
+        publica: [
+          ["BancoEstructura", "generarReporteOrdenado", "Guarda cabezaReporte y reporteGenerado = true", "fachada"],
+        ],
+        interna: [
+          ["ReporteLista", "generarOrdenado", "Lista → orquesta limpiar + inorden + merge", "lista"],
+          ["ReporteLista", "limpiarEnlaces", "Lista → siguiente = null en todos", "lista"],
+          ["ReporteLista", "recorridoInordenEncadenar", "Árbol inorden + enlaza siguiente", "arbol"],
+          ["ReporteLista", "mergeSortLista", "Lista → dividirLista + fusionarListas", "lista"],
+          ["ReporteLista", "dividirLista / fusionarListas", "Lista → orden final por cuenta", "lista"],
+        ],
+        mermaid: `flowchart TD
+  subgraph FACHADA["Fachada — BancoEstructura"]
+    F1[generarReporteOrdenado]
+    F2[cabezaReporte / reporteGenerado]
+  end
+  subgraph HASH["Tabla hash — casilleros[]"]
+    H1[recorrer cada casillero]
+  end
+  subgraph ARBOL["Árbol RBT — inorden por balde"]
+    A1[recorridoInordenEncadenar]
+    A2[izquierdo → nodo → derecho]
+  end
+  subgraph LISTA["Lista — puntero siguiente"]
+    L1[limpiarEnlaces]
+    L2[encadenar nodos]
+    L3[mergeSortLista]
+    L4[dividirLista + fusionarListas]
+  end
+  F1 --> F2
+  F2 --> L1
+  L1 --> H1
+  H1 --> A1
+  A1 --> A2
+  A2 --> L2
+  L2 --> L3
+  L3 --> L4`,
+      },
+      contar: {
+        titulo: "contarClientes()",
+        cadenaEstructura: ["fachada", "hash", "arbol"],
+        cadena: [
+          "BancoEstructura.contarClientes",
+          "TablaHash.contarClientes",
+          "ArbolRojoNegro.contar (por balde)",
+        ],
+        desc:
+          "Hash: bucle sobre casilleros[]. Por cada balde no vacío, el árbol aporta su tamaño con recursión en izq/der. No usa el puntero siguiente.",
+        publica: [["BancoEstructura", "contarClientes", "Total de clientes en el banco", "fachada"]],
+        interna: [
+          ["TablaHash", "contarClientes", "Hash → for cada casillero", "hash"],
+          ["ArbolRojoNegro", "contar", "Árbol → 1 + izq + der recursivo", "arbol"],
+        ],
+        mermaid: `flowchart TD
+  subgraph FACHADA["Fachada — BancoEstructura"]
+    F1[contarClientes]
+  end
+  subgraph HASH["Tabla hash — casilleros[]"]
+    H1[TablaHash.contarClientes]
+    H2[for i en casilleros]
+  end
+  subgraph ARBOL["Árbol RBT — cada balde"]
+    A1[ArbolRojoNegro.contar raíz]
+    A2[recursivo izquierdo + derecho]
+  end
+  F1 --> H1
+  H1 --> H2
+  H2 --> A1
+  A1 --> A2
+  A2 --> F1`,
+      },
+    };
+
+    let opActual = "insertar";
+    let mermaidListo = false;
+    let mermaidSeq = 0;
+
+    const ETIQUETAS = { hash: "Hash", arbol: "Árbol RBT", lista: "Lista siguiente", fachada: "Fachada" };
+
+    function renderTabla(tbodyId, filas, conEstructura) {
+      const tb = document.getElementById(tbodyId);
+      const head = tb.closest("table").querySelector("thead tr");
+      if (conEstructura && head && head.children.length === 3) {
+        head.innerHTML = "<th>Clase</th><th>Método</th><th>Estructura</th><th>Qué hace</th>";
+      } else if (!conEstructura && head && head.children.length === 4) {
+        head.innerHTML = "<th>Clase</th><th>Método</th><th>Qué hace</th>";
+      }
+      tb.innerHTML = filas
+        .map((row) => {
+          if (conEstructura && row.length >= 4) {
+            const [c, m, d, est] = row;
+            return `<tr><td><code>${c}</code></td><td><code>${m}</code></td><td><span class="tag-estructura ${est}">${ETIQUETAS[est] || est}</span></td><td>${d}</td></tr>`;
+          }
+          const [c, m, d] = row;
+          return `<tr><td><code>${c}</code></td><td><code>${m}</code></td><td>${d}</td></tr>`;
+        })
+        .join("");
+    }
+
+    function renderOp(op) {
+      opActual = op;
+      const f = FLUJOS[op];
+      document.getElementById("tituloOp").textContent = f.titulo;
+      document.getElementById("descOp").textContent = f.desc;
+      const cad = document.getElementById("cadena");
+      const ests = f.cadenaEstructura || [];
+      cad.innerHTML = f.cadena
+        .map((n, i) => {
+          const sep = i < f.cadena.length - 1 ? '<span class="flecha-fn">→</span>' : "";
+          const tag = ests[i]
+            ? `<span class="tag-estructura ${ests[i]}">${ETIQUETAS[ests[i]] || ests[i]}</span>`
+            : "";
+          return `<span class="paso-cadena" data-paso="${i}">${tag}${n}</span>${sep}`;
+        })
+        .join("");
+      document.getElementById("leyendaEstructuras").hidden = !ests.length;
+      const anim = window.BancoAnim.animarFlujoAPI(op);
+      reproductor.cargarPasos(anim.pasos);
+      BV.resaltarCadenaPaso(cad, 0);
+      const tablaConEst = f.interna.length > 0 && f.interna[0].length >= 4;
+      renderTabla("tablaPublica", f.publica, tablaConEst && f.publica[0]?.length >= 4);
+      renderTabla("tablaInterna", f.interna, tablaConEst);
+      renderDiagramaMermaid(f.mermaid);
+    }
+
+    async function renderDiagramaMermaid(codigo) {
+      const wrap = document.getElementById("mermaidWrap");
+      if (!codigo) {
+        wrap.innerHTML = '<p class="nota">Sin diagrama para esta operación.</p>';
+        return;
+      }
+      if (!mermaidListo || typeof mermaid === "undefined") {
+        wrap.innerHTML = '<p class="nota">Cargando Mermaid…</p>';
+        wrap.dataset.pendiente = codigo;
+        return;
+      }
+      const pendiente = codigo.trim();
+      wrap.innerHTML = '<p class="nota" style="margin:0">Generando diagrama…</p>';
+      const id = "mermaid-diag-" + opActual + "-" + ++mermaidSeq;
+      try {
+        const { svg, bindFunctions } = await mermaid.render(id, pendiente);
+        wrap.innerHTML = svg;
+        if (typeof bindFunctions === "function") bindFunctions(wrap);
+      } catch (err) {
+        console.error("Mermaid:", err);
+        wrap.innerHTML =
+          '<p class="nota">No se pudo dibujar el diagrama. Código:</p><pre class="codigo">' +
+          pendiente +
+          "</pre>";
+      }
+    }
+
+    function initMermaid() {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "dark",
+        securityLevel: "loose",
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" },
+      });
+      mermaidListo = true;
+      const wrap = document.getElementById("mermaidWrap");
+      if (wrap.dataset.pendiente) {
+        renderDiagramaMermaid(wrap.dataset.pendiente);
+        delete wrap.dataset.pendiente;
+      } else {
+        renderDiagramaMermaid(FLUJOS[opActual].mermaid);
+      }
+    }
+
+    document.getElementById("ops").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-op]");
+      if (!btn) return;
+      document.querySelectorAll("#ops .btn").forEach((b) => {
+        b.classList.remove("btn-primario");
+        b.classList.add("btn-secundario");
+      });
+      btn.classList.remove("btn-secundario");
+      btn.classList.add("btn-primario");
+      renderOp(btn.dataset.op);
+    });
+
+    renderOp("insertar");
+
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
+    s.onload = initMermaid;
+    s.onerror = () => {
+      document.getElementById("mermaidWrap").innerHTML =
+        '<p class="nota">No se pudo cargar Mermaid (revisa tu conexión).</p>';
+    };
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>

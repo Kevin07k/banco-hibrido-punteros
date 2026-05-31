@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Casos árbol rojo-negro — Guía</title>
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+<body>
+  <nav class="nav-global">
+    <span class="marca">Banco Híbrido · Docs</span>
+    <a href="index.html">Inicio</a>
+    <a href="interactivo.html">Simulador</a>
+    <a href="funciones.html">Mapa de funciones</a>
+    <a href="arbol-rojo-negro.html">Árbol R-N</a>
+    <a href="rbt-casos.html" class="activo">Casos R-N</a>
+    <a href="ordenamiento-punteros.html">Ordenamiento</a>
+  </nav>
+
+  <main class="contenedor contenedor-guia-rbt">
+    <h1>Casos del árbol rojo-negro</h1>
+    <p class="subtitulo">
+      <strong>Ver cambio</strong> = morph rápido antes → después en cada caso.
+      <strong>Paso a paso</strong> = punteros en el panel superior (abre al pulsar el botón en un caso).
+    </p>
+
+    <details class="tarjeta rbt-panel-pasos" id="panel-paso-a-paso">
+      <summary class="rbt-panel-pasos-summary">
+        <span class="rbt-panel-pasos-titulo">Paso a paso con punteros</span>
+        <span class="rbt-panel-pasos-hint">Se abre al elegir ▶ Paso a paso en un caso</span>
+      </summary>
+      <div class="rbt-panel-pasos-body">
+        <p id="rbt-pasos-subtitulo" class="nota rbt-pasos-sub">
+          Pulsa <strong>▶ Paso a paso</strong> en un caso de abajo.
+        </p>
+        <div id="reproductor-pasos"></div>
+        <div class="zona-animacion zona-animacion-compacta">
+          <div class="canvas-contenedor">
+            <canvas id="canvasPasosRbt" class="canvas-arbol" data-altura-logica="300"></canvas>
+          </div>
+          <div class="leyenda leyenda-compacta">
+            <span class="l-rojo">Rojo</span>
+            <span class="l-negro">Negro</span>
+            <span>Ámbar = actual</span>
+            <span>Verde = hijo</span>
+            <span>Lila = pivote</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <nav class="rbt-nav-grupos" aria-label="Grupos">
+      <a class="rbt-nav-pill" href="#grupo-fundamentos">Fundamentos</a>
+      <a class="rbt-nav-pill" href="#grupo-insertar">Inserción</a>
+      <a class="rbt-nav-pill" href="#grupo-eliminar">Eliminación</a>
+    </nav>
+
+    <!-- ——— FUNDAMENTOS ——— -->
+    <details class="rbt-grupo" id="grupo-fundamentos" open>
+      <summary>
+        <span class="rbt-grupo-titulo">Fundamentos y rotaciones</span>
+        <span class="rbt-grupo-sub">Reglas del proyecto · <code>rotarIzquierda</code> / <code>rotarDerecha</code></span>
+      </summary>
+      <div class="rbt-grupo-body rbt-grupo-body-dos-col">
+
+        <article class="rbt-caso rbt-caso-ancho">
+          <h3>Reglas en <code>ArbolRojoNegro.java</code></h3>
+          <div class="rbt-reglas-grid">
+            <div class="rbt-regla"><span class="rbt-regla-num">1</span><span>Nodo nuevo → <strong>rojo</strong> (salvo árbol vacío → raíz negra).</span></div>
+            <div class="rbt-regla"><span class="rbt-regla-num">2</span><span><code>insertarEnArbol</code> — BST por cuenta.</span></div>
+            <div class="rbt-regla"><span class="rbt-regla-num">3</span><span><strong>5 casos</strong> de inserción y <strong>6 casos</strong> de eliminación (ver secciones abajo y <code>AGENT.md</code> §5).</span></div>
+            <div class="rbt-regla"><span class="rbt-regla-num">4</span><span>Raíz final siempre <strong>negra</strong>.</span></div>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Rotación izquierda</h3>
+          <p class="rbt-caso-texto">El hijo derecho sube; el nodo pivote pasa a ser su hijo izquierdo.</p>
+          <div class="rbt-comparador"
+            data-antes="rot-izq-antes"
+            data-despues="rot-izq-despues"
+            data-secuencia="30, 50, 40"
+            data-titulo-caso="Rotación izquierda"
+            data-pasos="ultima"
+            data-texto-antes="Antes de rotarIzquierda(30)"
+            data-texto-despues="Después: 50 quedó arriba, 30 a su izquierda"
+            data-texto-animar="Vista rápida: cómo queda el árbol">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Antes de rotarIzquierda(30)</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Rotación derecha</h3>
+          <p class="rbt-caso-texto">Espejo: sube el hijo izquierdo.</p>
+          <div class="rbt-comparador"
+            data-antes="rot-der-antes"
+            data-despues="rot-der-despues"
+            data-secuencia="50, 30, 40"
+            data-titulo-caso="Rotación derecha"
+            data-pasos="ultima"
+            data-texto-antes="Antes de rotarDerecha(50)"
+            data-texto-despues="Después: 30 quedó arriba"
+            data-texto-animar="Vista rápida del resultado">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Antes de rotarDerecha(50)</p>
+          </div>
+        </article>
+      </div>
+    </details>
+
+    <!-- ——— INSERCIÓN ——— -->
+    <details class="rbt-grupo" id="grupo-insertar">
+      <summary>
+        <span class="rbt-grupo-titulo">Inserción — 5 casos de <code>corregirInsercion</code></span>
+        <span class="rbt-grupo-sub">Vacío · padre negro · tío rojo · triángulo · línea</span>
+      </summary>
+      <div class="rbt-grupo-body rbt-grupo-body-dos-col">
+
+        <article class="rbt-caso">
+          <h3>Caso 1 — Árbol vacío</h3>
+          <p class="rbt-caso-texto">N es la raíz → pintar <strong>NEGRO</strong>. No entra al <code>while</code> de balanceo.</p>
+          <button type="button" class="btn btn-primario rbt-btn-pasos"
+            data-secuencia="42"
+            data-titulo-caso="Inserción — Caso 1"
+            data-pasos="ultima">▶ Paso a paso</button>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 2 — Padre negro</h3>
+          <p class="rbt-caso-texto">No hay dos rojos seguidos; <code>corregirInsercion</code> termina sin cambios.</p>
+          <button type="button" class="btn btn-primario rbt-btn-pasos"
+            data-secuencia="50, 30"
+            data-titulo-caso="Inserción — Caso 2"
+            data-pasos="ultima">▶ Paso a paso</button>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 3 — Tío rojo (recolorar)</h3>
+          <p class="rbt-caso-texto">P y T → negro, A → rojo. El problema sube a A (recursión).</p>
+          <div class="rbt-comparador"
+            data-antes="ins-tio-antes"
+            data-despues="ins-tio-despues"
+            data-secuencia="10, 5, 15, 3"
+            data-titulo-caso="Inserción — Caso 3"
+            data-pasos="ultima"
+            data-texto-antes="Violación: dos rojos (tras insertar 3)"
+            data-texto-despues="P y T negros; abuelo 10 rojo"
+            data-texto-animar="Vista rápida tras recolorar">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Tío rojo</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 4 — Triángulo (Zig-Zag)</h3>
+          <p class="rbt-caso-texto">Tío negro/nulo, forma triángulo → <strong>rotación en P</strong>; luego Caso 5.</p>
+          <div class="rbt-comparador"
+            data-antes="ins-triangulo-antes"
+            data-despues="ins-triangulo-despues"
+            data-secuencia="30, 10, 20"
+            data-titulo-caso="Inserción — Caso 4 y 5"
+            data-pasos="ultima"
+            data-texto-antes="Triángulo (30, 10, 20)"
+            data-texto-despues="Tras rotar en P y en A: raíz 20 negra"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Zig-Zag → Zig-Zig</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 5 — Línea (Zig-Zig)</h3>
+          <p class="rbt-caso-texto">N y P alineados → <strong>rotación en A</strong> + P negro, A rojo.</p>
+          <div class="rbt-comparador"
+            data-antes="ins-linea-antes"
+            data-despues="ins-linea-despues"
+            data-secuencia="10, 20, 30"
+            data-titulo-caso="Inserción — Caso 5"
+            data-pasos="ultima"
+            data-texto-antes="Línea derecha (10, 20, 30)"
+            data-texto-despues="Balanceado tras rotar en el abuelo"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Zig-Zig directo</p>
+          </div>
+        </article>
+      </div>
+    </details>
+
+    <!-- ——— ELIMINACIÓN ——— -->
+    <details class="rbt-grupo" id="grupo-eliminar">
+      <summary>
+        <span class="rbt-grupo-titulo">Eliminación — 6 casos de <code>corregirEliminacion</code></span>
+        <span class="rbt-grupo-sub">Raíz · hermano rojo · sobrinos · triángulo · lejano rojo</span>
+      </summary>
+      <div class="rbt-grupo-body rbt-grupo-body-dos-col">
+
+        <article class="rbt-caso rbt-caso-ancho">
+          <h3>Preámbulo: dos hijos → sucesor</h3>
+          <p class="rbt-caso-texto">
+            No es un caso de balanceo: intercambio de datos con el sucesor y baja del nodo hoja.
+            Si era <strong>negro</strong>, empieza el doble negro (casos 1–6).
+          </p>
+          <div class="rbt-comparador-canvas-wrap rbt-solo-diagrama">
+            <canvas data-diagram-solo="del-2hijos" data-altura="180"></canvas>
+          </div>
+          <button type="button" class="btn btn-primario rbt-btn-pasos"
+            data-caso-eliminar="del-2hijos"
+            data-titulo-caso="Dos hijos → sucesor"
+            data-pasos="eliminar">▶ Paso a paso</button>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 1 — Doble negro en la raíz</h3>
+          <p class="rbt-caso-texto">El déficit sube hasta la cima → quitar el negro extra; termina.</p>
+          <button type="button" class="btn btn-primario rbt-btn-pasos"
+            data-caso-eliminar="del-raiz"
+            data-titulo-caso="Eliminación — Caso 1"
+            data-pasos="eliminar">▶ Paso a paso</button>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 2 — Hermano rojo</h3>
+          <p class="rbt-caso-texto">Rotar padre hacia V + recolorear; reconfigura para casos 3–6.</p>
+          <div class="rbt-comparador"
+            data-antes="del-herm-rojo-antes"
+            data-despues="del-herm-rojo-despues"
+            data-caso-eliminar="del-herm-rojo"
+            data-titulo-caso="Eliminación — Caso 2"
+            data-texto-antes="Hermano 15 rojo"
+            data-texto-despues="Tras rotar el padre"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Hermano rojo</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 3 — Sobrinos negros, padre negro</h3>
+          <p class="rbt-caso-texto">H → rojo; el doble negro sube al padre (recursión).</p>
+          <div class="rbt-comparador"
+            data-antes="del-sobrinos-negros-antes"
+            data-despues="del-sobrinos-negros-despues"
+            data-caso-eliminar="del-sobrinos-negros"
+            data-titulo-caso="Eliminación — Caso 3"
+            data-texto-antes="Padre 20 negro; sobrinos 25 y 35 negros"
+            data-texto-despues="Hermano 30 rojo; déficit en 20"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Subir déficit</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 4 — Sobrinos negros, padre rojo</h3>
+          <p class="rbt-caso-texto">H → rojo, padre → negro; absorbe el doble negro. Termina.</p>
+          <div class="rbt-comparador"
+            data-antes="del-padre-rojo-antes"
+            data-despues="del-padre-rojo-despues"
+            data-caso-eliminar="del-padre-rojo"
+            data-titulo-caso="Eliminación — Caso 4"
+            data-texto-antes="Padre 20 rojo; sobrinos negros"
+            data-texto-despues="Padre negro; H rojo"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Padre rojo absorbe</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 5 — Triángulo (sobrino cercano rojo)</h3>
+          <p class="rbt-caso-texto">Rotación sobre H + recolorear → cae en Caso 6.</p>
+          <div class="rbt-comparador"
+            data-antes="del-sobrino-int-antes"
+            data-despues="del-sobrino-int-despues"
+            data-caso-eliminar="del-sobrino-int"
+            data-titulo-caso="Eliminación — Caso 5"
+            data-texto-antes="Sobrino cercano 25 rojo, lejano negro"
+            data-texto-despues="Alineado para Caso 6"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Zig-Zag en sobrinos</p>
+          </div>
+        </article>
+
+        <article class="rbt-caso">
+          <h3>Caso 6 — Sobrino lejano rojo</h3>
+          <p class="rbt-caso-texto">Rotar padre hacia V + colores finales; doble negro disuelto.</p>
+          <div class="rbt-comparador"
+            data-antes="del-sobrino-ext-antes"
+            data-despues="del-sobrino-ext-despues"
+            data-caso-eliminar="del-sobrino-ext"
+            data-titulo-caso="Eliminación — Caso 6"
+            data-texto-antes="Sobrino lejano 35 rojo"
+            data-texto-despues="Tras rotar padre 20"
+            data-texto-animar="Vista rápida">
+            <div class="rbt-comparador-canvas-wrap">
+              <canvas class="rbt-comparador-canvas" data-altura="200"></canvas>
+            </div>
+            <div class="rbt-comparador-controles">
+              <button type="button" class="btn btn-secundario activo" data-modo="antes">Antes</button>
+              <button type="button" class="btn btn-secundario" data-modo="despues">Después</button>
+              <button type="button" class="btn btn-secundario" data-modo="animar">▶ Ver cambio</button>
+              <button type="button" class="btn btn-primario" data-modo="pasos">▶ Paso a paso</button>
+            </div>
+            <p class="rbt-comparador-leyenda">Arreglo final</p>
+          </div>
+        </article>
+      </div>
+    </details>
+  </main>
+
+  <script src="js/nucleo.js"></script>
+  <script src="js/canvas-hd.js"></script>
+  <script src="js/serializacion.js"></script>
+  <script src="js/motor-animacion.js"></script>
+  <script src="js/vista.js"></script>
+  <script src="js/reproductor.js"></script>
+  <script src="js/rbt-aprendizaje.js"></script>
+  <script>
+    RbtAprendizaje.initPaginaCasos();
+
+    document.querySelectorAll(".rbt-nav-pill[href^='#']").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const id = a.getAttribute("href").slice(1);
+        const det = document.getElementById(id);
+        if (det && det.classList.contains("rbt-grupo")) {
+          e.preventDefault();
+          det.open = true;
+          det.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
