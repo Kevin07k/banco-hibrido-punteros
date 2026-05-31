@@ -8,6 +8,51 @@ El diseño completo del equipo (roles, fases e integración) está en el documen
 
 ---
 
+## Cómo funciona la estructura de datos
+
+El banco no usa `HashMap` ni `TreeMap` de Java. Todo está hecho a mano con punteros.
+
+### Tabla hash + árboles rojo-negro
+
+Hay un **arreglo fijo de casilleros** (`TablaHash`). Cada posición apunta a la raíz de un **árbol rojo-negro (RBT)** propio:
+
+```
+casilleros[0] → (árbol RBT del balde 0)
+casilleros[1] → (árbol RBT del balde 1)
+...
+casilleros[i] → (árbol RBT del balde i)
+```
+
+Para ubicar un cliente se calcula `cuenta % tamaño_tabla`. Si varias cuentas caen en el mismo casillero (colisión), **no se encadenan en lista**: comparten el mismo balde y se ordenan dentro de su RBT por número de cuenta.
+
+- **Insertar / buscar / eliminar:** hash → balde → recorrer solo ese árbol.
+- **Complejidad típica:** hash O(1) + árbol O(log n) por balde.
+
+### Nodo híbrido (un solo objeto, dos roles)
+
+Cada cliente vive en un `NodoHibrido` que guarda el `Cliente` y **dos canales de punteros a la vez**:
+
+| Canal | Punteros | Para qué |
+|-------|----------|----------|
+| **Árbol RBT** | `izquierdo`, `derecho`, `padre`, `esRojo` | Estructura del balde (búsqueda e inserción) |
+| **Reporte** | `siguiente` | Lista enlazada global, independiente del árbol |
+
+Así no se duplican nodos: el mismo objeto sirve para el árbol **y** para armar el reporte, sin mezclar los punteros del BST con los de la lista.
+
+### Reporte ordenado (sin `java.util`)
+
+Cuando se pide el reporte global (`generarReporteOrdenado()`):
+
+1. **Encadenar (inorden):** se recorre casillero por casillero; en cada balde con datos, un recorrido **inorden** del RBT enlaza los nodos con `siguiente`. Resultado: una sola lista, aún desordenada entre baldes.
+2. **Ordenar (MergeSort):** se ordena esa lista por número de cuenta usando solo `siguiente`. Los punteros del árbol (`izquierdo`, `derecho`, `padre`) **no se tocan**.
+3. **Mostrar:** Luna (capa presentación) recorre la lista con `while (actual != null)` y `actual.getSiguiente()`.
+
+La fachada que orquesta todo esto es `BancoEstructura`; la lógica interna vive en `TablaHash`, `ArbolRojoNegro` y `ReporteLista`.
+
+Diagrama de clases y simulador paso a paso: [`docs/diagrama-clases.md`](docs/diagrama-clases.md) y [`docs/simulador/`](docs/simulador/).
+
+---
+
 ## Resumen del plan (según `Plan_Proyecto.pdf`)
 
 | Capa | Responsables | Qué hace |
