@@ -4,7 +4,7 @@ package datos;
  * Celda de memoria hibrida con triple canal de punteros.
  * <ul>
  *   <li>Canal arbol RBT: izquierdo, derecho, padre, esRojo</li>
- *   <li>Canal reporte: siguiente (lista enlazada independiente del arbol)</li>
+ *   <li>Canal reporte: siguiente y anterior (lista doblemente enlazada, independiente del arbol)</li>
  * </ul>
  */
 public class NodoHibrido {
@@ -14,6 +14,7 @@ public class NodoHibrido {
     private NodoHibrido derecho;
     private NodoHibrido padre;
     private NodoHibrido siguiente;
+    private NodoHibrido anterior;
     private boolean esRojo;
 
     public NodoHibrido(Cliente datos) {
@@ -22,6 +23,7 @@ public class NodoHibrido {
         this.derecho = null;
         this.padre = null;
         this.siguiente = null;
+        this.anterior = null;
         this.esRojo = true;
     }
 
@@ -63,6 +65,14 @@ public class NodoHibrido {
 
     public void setSiguiente(NodoHibrido siguiente) {
         this.siguiente = siguiente;
+    }
+
+    public NodoHibrido getAnterior() {
+        return anterior;
+    }
+
+    public void setAnterior(NodoHibrido anterior) {
+        this.anterior = anterior;
     }
 
     public boolean isEsRojo() {

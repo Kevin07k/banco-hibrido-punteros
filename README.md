@@ -2,7 +2,7 @@
 
 **Carpeta del proyecto:** `banco-hibrido-punteros`
 
-Proyecto de Estructuras de Datos: banco en **Java puro** con tabla hash, árbol rojo-negro por balde y reporte ordenado usando solo el puntero `siguiente` en `NodoHibrido` (sin `java.util` para el reporte).
+Proyecto de Estructuras de Datos: banco en **Java puro** con tabla hash, árbol rojo-negro por balde y reporte ordenado con lista doblemente enlazada (`siguiente` + `anterior` en `NodoHibrido`, sin `java.util` para el reporte).
 
 El diseño completo del equipo (roles, fases e integración) está en el documento **`Plan_Proyecto.pdf`** (*Diseño de arquitectura y roles del proyecto — Sistema bancario por punteros*). Conserven una copia en el grupo; este README es un resumen mínimo para arrancar.
 
@@ -35,19 +35,27 @@ Cada cliente vive en un `NodoHibrido` que guarda el `Cliente` y **dos canales de
 | Canal | Punteros | Para qué |
 |-------|----------|----------|
 | **Árbol RBT** | `izquierdo`, `derecho`, `padre`, `esRojo` | Estructura del balde (búsqueda e inserción) |
-| **Reporte** | `siguiente` | Lista enlazada global, independiente del árbol |
+| **Reporte** | `siguiente`, `anterior` | Lista doblemente enlazada global, independiente del árbol |
 
 Así no se duplican nodos: el mismo objeto sirve para el árbol **y** para armar el reporte, sin mezclar los punteros del BST con los de la lista.
 
+`BancoEstructura` mantiene `cabezaReporte`, `colaReporte`, `reporteGenerado` y `reporteOrdenado` (ver [`docs/diseno-optimizado-estructura.md`](docs/diseno-optimizado-estructura.md)).
+
 ### Reporte ordenado (sin `java.util`)
 
-Cuando se pide el reporte global (`generarReporteOrdenado()`):
+**Al insertar:** el nodo se enlaza al final de la lista reporte en **O(1)** (`colaReporte`). No se hace merge ni se limpia el bosque.
 
-1. **Encadenar (inorden):** se recorre casillero por casillero; en cada balde con datos, un recorrido **inorden** del RBT enlaza los nodos con `siguiente`. Resultado: una sola lista, aún desordenada entre baldes.
-2. **Ordenar (MergeSort):** se ordena esa lista por número de cuenta usando solo `siguiente`. Los punteros del árbol (`izquierdo`, `derecho`, `padre`) **no se tocan**.
-3. **Mostrar:** Luna (capa presentación) recorre la lista con `while (actual != null)` y `actual.getSiguiente()`.
+**Al eliminar:** se desengancha con `anterior` / `siguiente` en **O(1)**. Si la lista ya estaba ordenada, sigue ordenada.
 
-La fachada que orquesta todo esto es `BancoEstructura`; la lógica interna vive en `TablaHash`, `ArbolRojoNegro` y `ReporteLista`.
+**Al pedir `generarReporteOrdenado()`:**
+
+- **O(1)** si `reporteOrdenado` es `true` (no hubo inserts desde el último merge).
+- **O(n log n)** si hubo inserts desde el último merge: solo `mergeSortLista` sobre la lista existente.
+- Si aún no hay lista: inorden por balde (`armarDesdeBosque`) + merge.
+
+Los punteros del árbol (`izquierdo`, `derecho`, `padre`) **no se tocan** en el reporte. Luna imprime recorriendo solo `getSiguiente()`.
+
+La fachada es `BancoEstructura`; la lógica interna vive en `TablaHash`, `ArbolRojoNegro` y `ReporteLista`.
 
 Diagrama de clases y simulador paso a paso: [`docs/diagrama-clases.md`](docs/diagrama-clases.md) y [`docs/simulador/`](docs/simulador/).
 
@@ -81,8 +89,9 @@ src/
       ArbolRojoNegro.java
       ReporteLista.java
 docs/
-  diagrama-clases.md        # Diagrama Mermaid (GitHub / IDE)
-  simulador/                # Web interactiva (HTML/JS)
+  diagrama-clases.md                 # Diagrama Mermaid (GitHub / IDE)
+  diseno-optimizado-estructura.md    # Lista doble + cola + bandera de orden
+  simulador/                         # Web interactiva (HTML/JS)
 ```
 
 ---
@@ -148,6 +157,6 @@ python3 -m http.server 8080
 ## Restricciones del docente (recordatorio)
 
 - No usar colecciones `java.util.*` para armar u ordenar el reporte general.
-- Reporte: recorrido inorden por balde + encadenar con `siguiente` + `mergeSortLista` por punteros.
+- Reporte: lista doble (`siguiente` + `anterior`), merge bajo demanda con `mergeSortLista` por punteros; inorden solo si la lista aún no existe.
 - Tabla hash: arreglo de casilleros; cada colisión es un **árbol RBT propio**.
 

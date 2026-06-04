@@ -9,7 +9,8 @@
     return Math.min(Math.max(raw, 1), 3);
   }
 
-  function prepararCanvasHD(canvas, alturaLogica) {
+  function prepararCanvasHD(canvas, alturaLogica, opts) {
+    const op = opts || {};
     const padre = canvas.parentElement;
     const rect = canvas.getBoundingClientRect();
     const anchoPadre = padre ? padre.clientWidth : 0;
@@ -39,7 +40,10 @@
 
     const ctx = canvas.getContext("2d", { alpha: true });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, pxW, pxH);
+    const mismoBuffer = canvas.width === pxW && canvas.height === pxH;
+    if (!op.sinLimpiar || !mismoBuffer) {
+      ctx.clearRect(0, 0, pxW, pxH);
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     if ("imageSmoothingQuality" in ctx) {

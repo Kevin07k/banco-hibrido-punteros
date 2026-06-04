@@ -2,11 +2,16 @@ package datos;
 
 import datos.interno.ArbolRojoNegro;
 import datos.interno.ReporteLista;
+import datos.interno.ReporteLista.ExtremosLista;
 import datos.interno.TablaHash;
 
 /**
  * Fachada de la capa de datos. Orquesta tabla hash, arboles RBT por balde
  * y generacion del reporte ordenado sin exponer la implementacion interna.
+ *
+ * <p>Lista reporte doblemente enlazada ({@code siguiente} + {@code anterior}) con
+ * append O(1) por {@code colaReporte} y re-ordenamiento bajo demanda via
+ * {@code reporteOrdenado} (ver docs/diseno-optimizado-estructura.md).
  */
 public class BancoEstructura {
 
@@ -14,7 +19,9 @@ public class BancoEstructura {
 
     private final TablaHash tabla;
     private NodoHibrido cabezaReporte;
+    private NodoHibrido colaReporte;
     private boolean reporteGenerado;
+    private boolean reporteOrdenado;
 
     public BancoEstructura() {
         this(TAMANO_TABLA_DEFAULT);
@@ -23,11 +30,21 @@ public class BancoEstructura {
     public BancoEstructura(int tamanoTabla) {
         this.tabla = new TablaHash(tamanoTabla);
         this.cabezaReporte = null;
+        this.colaReporte = null;
         this.reporteGenerado = false;
+        this.reporteOrdenado = false;
     }
 
     public int getTamanoTabla() {
         return tabla.getTamano();
+    }
+
+    public boolean isReporteGenerado() {
+        return reporteGenerado;
+    }
+
+    public boolean isReporteOrdenado() {
+        return reporteOrdenado;
     }
 
     /**
@@ -49,7 +66,15 @@ public class BancoEstructura {
 
         NodoHibrido nuevo = new NodoHibrido(cliente);
         tabla.setRaizPorCuenta(cuenta, ArbolRojoNegro.insertar(raiz, nuevo));
-        invalidarReporte();
+
+        ExtremosLista extremos = ReporteLista.encadenarAlFinal(cabezaReporte, colaReporte, nuevo);
+        cabezaReporte = extremos.cabeza;
+        colaReporte = extremos.cola;
+        reporteGenerado = true;
+        if (reporteOrdenado) {
+            reporteOrdenado = false;
+        }
+
         return true;
     }
 
@@ -80,27 +105,58 @@ public class BancoEstructura {
         }
 
         if (reporteGenerado) {
-            cabezaReporte = ReporteLista.desenganchar(cabezaReporte, objetivo);
+            ExtremosLista extremos = ReporteLista.desenganchar(cabezaReporte, colaReporte, objetivo);
+            cabezaReporte = extremos.cabeza;
+            colaReporte = extremos.cola;
+            if (cabezaReporte == null) {
+                reporteGenerado = false;
+                reporteOrdenado = false;
+            }
         }
 
         tabla.setRaizPorCuenta(cuenta, ArbolRojoNegro.eliminar(raiz, objetivo));
-        invalidarReporte();
         return true;
     }
 
     /**
-     * Fase 1 + 2 del reporte: encadena todos los nodos y ordena por cuenta con MergeSort.
+     * Devuelve la cabeza del reporte ordenado por cuenta.
+     * <ul>
+     *   <li>O(1) si la lista ya esta ordenada y no hubo inserts desde el ultimo merge.</li>
+     *   <li>O(n log n) si hubo inserts (lista sucia) o aun no existe lista reporte.</li>
+     * </ul>
      *
      * @return cabeza de la lista enlazada ordenada por {@code siguiente}.
      */
     public NodoHibrido generarReporteOrdenado() {
-        cabezaReporte = ReporteLista.generarOrdenado(tabla.getCasilleros());
-        reporteGenerado = cabezaReporte != null;
+        if (tabla.contarClientes() == 0) {
+            cabezaReporte = null;
+            colaReporte = null;
+            reporteGenerado = false;
+            reporteOrdenado = false;
+            return null;
+        }
+
+        if (!reporteGenerado || cabezaReporte == null) {
+            ExtremosLista extremos = ReporteLista.armarDesdeBosque(tabla.getCasilleros());
+            cabezaReporte = ReporteLista.mergeSortLista(extremos.cabeza);
+            colaReporte = ReporteLista.obtenerCola(cabezaReporte);
+            reporteGenerado = true;
+            reporteOrdenado = true;
+            return cabezaReporte;
+        }
+
+        if (reporteOrdenado) {
+            return cabezaReporte;
+        }
+
+        cabezaReporte = ReporteLista.mergeSortLista(cabezaReporte);
+        colaReporte = ReporteLista.obtenerCola(cabezaReporte);
+        reporteOrdenado = true;
         return cabezaReporte;
     }
 
     /**
-     * Entrega la cabeza del reporte ya generado.
+     * Entrega la cabeza del reporte ya generado (puede no estar ordenada si hubo inserts).
      */
     public NodoHibrido obtenerCabezaReporte() {
         return cabezaReporte;
@@ -112,13 +168,5 @@ public class BancoEstructura {
 
     private NodoHibrido buscarNodo(long cuenta) {
         return ArbolRojoNegro.buscar(tabla.getRaizPorCuenta(cuenta), cuenta);
-    }
-
-    private void invalidarReporte() {
-        if (reporteGenerado) {
-            ReporteLista.limpiarEnlaces(tabla.getCasilleros());
-            cabezaReporte = null;
-            reporteGenerado = false;
-        }
     }
 }

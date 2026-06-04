@@ -207,7 +207,17 @@
         if (paso.hashIdx >= 0) baldeActivo = paso.hashIdx;
         actualizarPills();
         actualizarAyudaReporte(paso);
-        return BV.aplicarPaso(paso, ui, opts);
+        let op = opts || {};
+        if (
+          paso &&
+          (paso.tipo === "merge" ||
+            paso.tipo === "encadenar" ||
+            paso.tipo === "fin" ||
+            paso.mergeArbol)
+        ) {
+          op = Object.assign({}, op, { instantaneo: true });
+        }
+        return BV.aplicarPaso(paso, ui, op);
       },
       alTerminar: aplicarResultadoFinal,
     });

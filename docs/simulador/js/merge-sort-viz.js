@@ -337,14 +337,14 @@
 
     if (instant) {
       cancelarMerge(canvas);
-      dibujarArbolMerge(canvas, arbol);
+      dibujarArbolMerge(canvas, arbol, { sinLimpiar: true });
       canvas._mergeSnap = snap;
       terminar();
       return;
     }
 
     if (mismaInstantaneaMerge(ant, snap)) {
-      dibujarArbolMerge(canvas, arbol);
+      dibujarArbolMerge(canvas, arbol, { sinLimpiar: true });
       canvas._mergeSnap = snap;
       terminar();
       return;
@@ -356,8 +356,9 @@
     });
   }
 
-  function dibujarArbolMerge(canvas, arbol) {
+  function dibujarArbolMerge(canvas, arbol, opts) {
     if (!global.BancoCanvas) return;
+    const op = opts || {};
 
     if (!arbol) {
       const altura = parseInt(canvas.dataset.alturaLogica, 10) || 360;
@@ -367,8 +368,13 @@
     }
 
     const altura = alturaLogicaArbol(arbol);
+    const alturaPrev = parseInt(canvas.dataset.alturaLogica, 10) || 0;
     canvas.dataset.alturaLogica = String(altura);
-    const { ctx, w, h, dpr } = global.BancoCanvas.preparar(canvas, altura);
+    const reutilizar =
+      op.sinLimpiar && alturaPrev === altura && canvas._logW > 0;
+    const { ctx, w, h, dpr } = global.BancoCanvas.preparar(canvas, altura, {
+      sinLimpiar: reutilizar,
+    });
     dibujarContenidoMerge(ctx, arbol, w, h, dpr);
 
     if (global.BancoCanvas.observar && canvas._redibujar) {

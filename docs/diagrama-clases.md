@@ -4,6 +4,7 @@ Vista del equipo según `Plan_Proyecto.pdf`. Lo implementado hoy está en `src/d
 
 - **API pública (Kevin):** `src/datos/` — `Cliente`, `NodoHibrido`, `BancoEstructura`
 - **Interno:** `src/datos/interno/` — `TablaHash`, `ArbolRojoNegro`, `ReporteLista`
+- **Diseño optimizado reporte:** [`diseno-optimizado-estructura.md`](diseno-optimizado-estructura.md)
 - **Simulador animado:** [`simulador/`](simulador/)
 
 ```mermaid
@@ -53,22 +54,28 @@ classDiagram
         -NodoHibrido derecho
         -NodoHibrido padre
         -NodoHibrido siguiente
+        -NodoHibrido anterior
         -boolean esRojo
         +getDatos() Cliente
         +getSiguiente() NodoHibrido
+        +getAnterior() NodoHibrido
         +getCuenta() long
     }
 
     class BancoEstructura {
         -TablaHash tabla
         -NodoHibrido cabezaReporte
+        -NodoHibrido colaReporte
         -boolean reporteGenerado
+        -boolean reporteOrdenado
         +insertar(Cliente) boolean
         +buscar(long) Cliente
         +existeCuenta(long) boolean
         +eliminar(long) boolean
         +generarReporteOrdenado() NodoHibrido
         +obtenerCabezaReporte() NodoHibrido
+        +isReporteGenerado() boolean
+        +isReporteOrdenado() boolean
         +contarClientes() int
     }
 
@@ -89,8 +96,16 @@ classDiagram
 
     class ReporteLista {
         +generarOrdenado(NodoHibrido[]) NodoHibrido$
+        +armarDesdeBosque(NodoHibrido[]) ExtremosLista$
+        +encadenarAlFinal(NodoHibrido, NodoHibrido, NodoHibrido) ExtremosLista$
+        +desenganchar(NodoHibrido, NodoHibrido, NodoHibrido) ExtremosLista$
+        +mergeSortLista(NodoHibrido) NodoHibrido$
         +limpiarEnlaces(NodoHibrido[]) void$
-        +desenganchar(NodoHibrido, NodoHibrido) NodoHibrido$
+    }
+
+    class ExtremosLista {
+        +NodoHibrido cabeza
+        +NodoHibrido cola
     }
 
     namespace presentacion {
@@ -112,6 +127,7 @@ classDiagram
         class TablaHash
         class ArbolRojoNegro
         class ReporteLista
+        class ExtremosLista
     }
 
     Main ..> BancoEstructura : demo actual
@@ -124,11 +140,12 @@ classDiagram
     BancoEstructura --> TablaHash
     BancoEstructura --> ArbolRojoNegro
     BancoEstructura --> ReporteLista
-    BancoEstructura --> NodoHibrido : cabezaReporte
+    BancoEstructura --> NodoHibrido : cabeza y cola reporte
 
     TablaHash "1" *-- "N" NodoHibrido : casilleros[]
     ArbolRojoNegro ..> NodoHibrido : izquierdo, derecho, padre
-    ReporteLista ..> NodoHibrido : siguiente
+    ReporteLista ..> NodoHibrido : siguiente, anterior
+    ReporteLista +-- ExtremosLista
 
     NodoHibrido --> Cliente : datos
 ```
@@ -143,7 +160,7 @@ src/datos/
 └── interno/
     ├── TablaHash.java     ← arreglo hash
     ├── ArbolRojoNegro.java← balanceo por balde
-    └── ReporteLista.java  ← inorden + MergeSort
+    └── ReporteLista.java  ← lista doble, merge, inorden bajo demanda
 ```
 
 ## Leyenda
@@ -151,7 +168,9 @@ src/datos/
 | Simbolo | Significado |
 |---------|-------------|
 | Canal arbol RBT | `izquierdo`, `derecho`, `padre`, `esRojo` — solo `ArbolRojoNegro` |
-| Canal reporte | `siguiente` — solo `ReporteLista` |
+| Canal reporte | `siguiente`, `anterior` — `ReporteLista` y recorrido de impresion |
+| `cabezaReporte` / `colaReporte` | Extremos de la lista global en `BancoEstructura` |
+| `reporteOrdenado` | `true` tras merge; `false` tras insert sin re-merge |
 | `casilleros[]` | Arreglo estatico; indice = `cuenta % tamano` |
 
 ## Flujo entre capas
@@ -165,4 +184,17 @@ flowchart LR
     E --> F[TablaHash]
     E --> G[ArbolRojoNegro]
     E --> H[ReporteLista]
+```
+
+## Flujo del reporte (optimizado)
+
+```mermaid
+flowchart TD
+    I[insertar] --> A[append O1 en colaReporte]
+    A --> F[reporteOrdenado = false si estaba true]
+    E[eliminar] --> D[desenganchar O1]
+    D --> K[reporteOrdenado sin cambio si ordenado]
+    G[generarReporteOrdenado] --> Q{reporteOrdenado?}
+    Q -->|si| R[retornar cabeza O1]
+    Q -->|no| M[mergeSortLista On log n]
 ```

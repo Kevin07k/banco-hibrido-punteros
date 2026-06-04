@@ -1085,12 +1085,15 @@
         const ids = BS().serializarLista(cabeza);
         reg.capturar(cas, {
           titulo: "Inorden → siguiente",
-          decision: `Encadenar cuenta ${n.getCuenta()} al final`,
-          detalle: antes.length ? `Lista: ${antes.join(" → ")} → ${n.getCuenta()}` : `Primera: ${n.getCuenta()}`,
+          decision: `Balde [${i}]: encadenar ${n.getCuenta()}`,
+          detalle: antes.length
+            ? `Visita inorden; lista: ${antes.join(" → ")} → ${n.getCuenta()}`
+            : `Visita inorden; primera cuenta: ${n.getCuenta()}`,
           tipo: "encadenar",
           listaIds: ids,
           resaltar: [n.getCuenta()],
           balde: i,
+          hashIdx: i,
         });
       });
     }
@@ -1118,14 +1121,6 @@
   function encadenarInordenAnim(nodo, cas, balde, reg, onNodo) {
     if (!nodo) return;
     encadenarInordenAnim(nodo.izquierdo, cas, balde, reg, onNodo);
-    reg.capturar(cas, {
-      titulo: "Visitar nodo (inorden)",
-      decision: `Procesar ${nodo.getCuenta()} del balde [${balde}]`,
-      detalle: "Izquierda ya visitada; ahora encadenamos este nodo.",
-      tipo: "encadenar",
-      balde,
-      resaltar: [nodo.getCuenta()],
-    });
     onNodo(nodo);
     encadenarInordenAnim(nodo.derecho, cas, balde, reg, onNodo);
   }

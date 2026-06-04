@@ -17,7 +17,7 @@
       izq: n.izquierdo ? n.izquierdo.getCuenta() : null,
       der: n.derecho ? n.derecho.getCuenta() : null,
       padre: n.padre ? n.padre.getCuenta() : null,
-      sig: n.siguiente ? n.siguiente.getCuenta() : null,
+      /* siguiente no se serializa: la lista del reporte va en paso.listaIds */
     };
   }
 
@@ -62,7 +62,7 @@
       n.izquierdo = sn.izq != null ? map[sn.izq] : null;
       n.derecho = sn.der != null ? map[sn.der] : null;
       n.padre = sn.padre != null ? map[sn.padre] : null;
-      n.siguiente = sn.sig != null ? map[sn.sig] : null;
+      n.siguiente = null;
     });
     return map[data.raizCuenta];
   }

@@ -512,10 +512,18 @@
 
     if (instant) {
       cancelar(canvas);
-      limpiarEstableCanvas(canvas);
+      const raizAnt = canvas._btRaiz ?? null;
+      const misma =
+        raizAnt && raizNuevo && mismaEstructura(raizAnt, raizNuevo);
+      if (!misma) limpiarEstableCanvas(canvas);
       dibujarDirecto(canvas, raizNuevo, op);
       canvas._btRaiz = clonarRaiz(raizNuevo);
       canvas._btOp = Object.assign({}, op);
+      if (misma && global.BancoCanvas) {
+        const altura = parseInt(canvas.dataset.alturaLogica, 10) || 360;
+        const prep = global.BancoCanvas.preparar(canvas, altura);
+        guardarPosicionesCanvas(canvas, layoutPosiciones(raizNuevo, prep.w, prep.h).pos);
+      }
       terminar();
       return;
     }

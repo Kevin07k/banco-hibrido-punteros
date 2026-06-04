@@ -4,15 +4,40 @@ import datos.Cliente;
 import datos.NodoHibrido;
 
 /**
- * Construccion y ordenamiento del reporte usando unicamente el puntero {@code siguiente}.
- * No utiliza colecciones de {@code java.util}.
+ * Construccion y ordenamiento del reporte con lista doblemente enlazada
+ * ({@code siguiente} + {@code anterior}). No utiliza colecciones de {@code java.util}.
  */
 public final class ReporteLista {
 
     private ReporteLista() {
     }
 
+    /**
+     * Cabeza y cola de la lista reporte tras una operacion de enlace.
+     */
+    public static final class ExtremosLista {
+        public final NodoHibrido cabeza;
+        public final NodoHibrido cola;
+
+        public ExtremosLista(NodoHibrido cabeza, NodoHibrido cola) {
+            this.cabeza = cabeza;
+            this.cola = cola;
+        }
+    }
+
+    /**
+     * Pipeline completo: inorden por balde + merge (uso legacy o banco sin lista previa).
+     */
     public static NodoHibrido generarOrdenado(NodoHibrido[] casilleros) {
+        ExtremosLista extremos = armarDesdeBosque(casilleros);
+        NodoHibrido ordenada = mergeSortLista(extremos.cabeza);
+        return ordenada;
+    }
+
+    /**
+     * Recorre el bosque en inorden y arma la lista reporte con doble enlace.
+     */
+    public static ExtremosLista armarDesdeBosque(NodoHibrido[] casilleros) {
         limpiarEnlaces(casilleros);
 
         NodoHibrido cabeza = null;
@@ -27,37 +52,83 @@ public final class ReporteLista {
             }
         }
 
-        return mergeSortLista(cabeza);
+        return new ExtremosLista(cabeza, cola);
+    }
+
+    /**
+     * Append en O(1) al final de la lista reporte.
+     */
+    public static ExtremosLista encadenarAlFinal(NodoHibrido cabeza, NodoHibrido cola, NodoHibrido nodo) {
+        nodo.setSiguiente(null);
+        if (cabeza == null) {
+            nodo.setAnterior(null);
+            return new ExtremosLista(nodo, nodo);
+        }
+        nodo.setAnterior(cola);
+        cola.setSiguiente(nodo);
+        return new ExtremosLista(cabeza, nodo);
+    }
+
+    /**
+     * Desengancha un nodo de la lista reporte en O(1) usando {@code anterior} y {@code siguiente}.
+     */
+    public static ExtremosLista desenganchar(NodoHibrido cabeza, NodoHibrido cola, NodoHibrido nodo) {
+        if (cabeza == null || nodo == null) {
+            return new ExtremosLista(cabeza, cola);
+        }
+
+        NodoHibrido ant = nodo.getAnterior();
+        NodoHibrido sig = nodo.getSiguiente();
+
+        if (ant != null) {
+            ant.setSiguiente(sig);
+        } else {
+            cabeza = sig;
+        }
+
+        if (sig != null) {
+            sig.setAnterior(ant);
+        } else {
+            cola = ant;
+        }
+
+        nodo.setSiguiente(null);
+        nodo.setAnterior(null);
+
+        return new ExtremosLista(cabeza, cola);
+    }
+
+    public static NodoHibrido mergeSortLista(NodoHibrido cabeza) {
+        if (cabeza == null || cabeza.getSiguiente() == null) {
+            if (cabeza != null) {
+                cabeza.setAnterior(null);
+            }
+            return cabeza;
+        }
+
+        NodoHibrido segundaMitad = dividirLista(cabeza);
+        NodoHibrido izquierda = mergeSortLista(cabeza);
+        NodoHibrido derecha = mergeSortLista(segundaMitad);
+        NodoHibrido ordenada = fusionarListas(izquierda, derecha);
+        reconstruirAnteriores(ordenada);
+        return ordenada;
+    }
+
+    public static NodoHibrido obtenerCola(NodoHibrido cabeza) {
+        if (cabeza == null) {
+            return null;
+        }
+        NodoHibrido actual = cabeza;
+        while (actual.getSiguiente() != null) {
+            actual = actual.getSiguiente();
+        }
+        return actual;
     }
 
     public static void limpiarEnlaces(NodoHibrido[] casilleros) {
         for (NodoHibrido raiz : casilleros) {
-            limpiarSiguienteEnArbol(raiz);
+            limpiarEnlacesEnArbol(raiz);
         }
-    }
-
-    public static NodoHibrido desenganchar(NodoHibrido cabezaReporte, NodoHibrido nodo) {
-        if (cabezaReporte == null || nodo == null) {
-            return cabezaReporte;
-        }
-
-        if (cabezaReporte == nodo) {
-            NodoHibrido nuevaCabeza = nodo.getSiguiente();
-            nodo.setSiguiente(null);
-            return nuevaCabeza;
-        }
-
-        NodoHibrido anterior = cabezaReporte;
-        while (anterior.getSiguiente() != null && anterior.getSiguiente() != nodo) {
-            anterior = anterior.getSiguiente();
-        }
-
-        if (anterior.getSiguiente() == nodo) {
-            anterior.setSiguiente(nodo.getSiguiente());
-            nodo.setSiguiente(null);
-        }
-
-        return cabezaReporte;
     }
 
     private static void recorridoInordenEncadenar(NodoHibrido nodo, Encadenador encadenador) {
@@ -67,17 +138,6 @@ public final class ReporteLista {
         recorridoInordenEncadenar(nodo.getIzquierdo(), encadenador);
         encadenador.agregar(nodo);
         recorridoInordenEncadenar(nodo.getDerecho(), encadenador);
-    }
-
-    private static NodoHibrido mergeSortLista(NodoHibrido cabeza) {
-        if (cabeza == null || cabeza.getSiguiente() == null) {
-            return cabeza;
-        }
-
-        NodoHibrido segundaMitad = dividirLista(cabeza);
-        NodoHibrido izquierda = mergeSortLista(cabeza);
-        NodoHibrido derecha = mergeSortLista(segundaMitad);
-        return fusionarListas(izquierda, derecha);
     }
 
     private static NodoHibrido dividirLista(NodoHibrido cabeza) {
@@ -91,6 +151,9 @@ public final class ReporteLista {
 
         NodoHibrido segundaMitad = lento.getSiguiente();
         lento.setSiguiente(null);
+        if (segundaMitad != null) {
+            segundaMitad.setAnterior(null);
+        }
         return segundaMitad;
     }
 
@@ -113,13 +176,24 @@ public final class ReporteLista {
         return dummy.getSiguiente();
     }
 
-    private static void limpiarSiguienteEnArbol(NodoHibrido nodo) {
+    private static void reconstruirAnteriores(NodoHibrido cabeza) {
+        NodoHibrido prev = null;
+        NodoHibrido actual = cabeza;
+        while (actual != null) {
+            actual.setAnterior(prev);
+            prev = actual;
+            actual = actual.getSiguiente();
+        }
+    }
+
+    private static void limpiarEnlacesEnArbol(NodoHibrido nodo) {
         if (nodo == null) {
             return;
         }
-        limpiarSiguienteEnArbol(nodo.getIzquierdo());
+        limpiarEnlacesEnArbol(nodo.getIzquierdo());
         nodo.setSiguiente(null);
-        limpiarSiguienteEnArbol(nodo.getDerecho());
+        nodo.setAnterior(null);
+        limpiarEnlacesEnArbol(nodo.getDerecho());
     }
 
     private static final class Encadenador {
@@ -134,10 +208,12 @@ public final class ReporteLista {
         private void agregar(NodoHibrido nodo) {
             nodo.setSiguiente(null);
             if (cabeza == null) {
+                nodo.setAnterior(null);
                 cabeza = nodo;
                 cola = nodo;
                 return;
             }
+            nodo.setAnterior(cola);
             cola.setSiguiente(nodo);
             cola = nodo;
         }
