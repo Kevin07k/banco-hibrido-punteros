@@ -1,5 +1,6 @@
 /**
- * Aplica un paso de animación a hash, árbol y lista.
+ * Puente entre reproductor/motor y la capa visual.
+ * Delega en BancoVisualUnificado (canvas + GSAP) cuando está disponible.
  */
 (function (global) {
   "use strict";
@@ -11,12 +12,51 @@
     balde: -1,
   };
 
+  function normalizarUi(ui) {
+    if (!ui) return ui;
+    const BV = global.BancoVisualUnificado;
+    if (!ui.canvas && ui.canvasMerge) {
+      return Object.assign({}, ui, {
+        canvas: ui.canvasMerge,
+        modo: ui.modo || "merge-lista",
+      });
+    }
+    if (ui.canvas && !ui.modo && BV) {
+      return Object.assign({}, ui, { modo: BV.modoDesdeUi(ui) });
+    }
+    return ui;
+  }
+
+  function usaUnificado(ui) {
+    const u = normalizarUi(ui);
+    return !!(global.BancoVisualUnificado && u && u.canvas);
+  }
+
+  function asegurarVisual(ui) {
+    const u = normalizarUi(ui);
+    if (!usaUnificado(u)) return u;
+    const BV = global.BancoVisualUnificado;
+    if (!BV.obtener(u.canvas)) {
+      BV.init(u.canvas, {
+        modo: u.modo,
+        tamano: u.tamano,
+        alturaLogica: parseInt(u.canvas.dataset.alturaLogica, 10) || undefined,
+      });
+    }
+    return u;
+  }
+
   function reiniciarCanvasAnimacion(ui) {
     if (!ui) return;
     estadoVista.hashKey = "";
     estadoVista.casKey = "";
     estadoVista.listaKey = "";
     estadoVista.balde = -1;
+    const u = asegurarVisual(ui);
+    if (usaUnificado(u)) {
+      global.BancoVisualUnificado.reiniciar(u);
+      return;
+    }
     if (ui.canvas && global.BancoTransicion) {
       global.BancoTransicion.resetEstado(ui.canvas);
     }
@@ -37,6 +77,14 @@
   }
 
   function aplicarPaso(paso, ui, opts) {
+    const u = asegurarVisual(ui);
+    if (usaUnificado(u)) {
+      return global.BancoVisualUnificado.aplicarPaso(paso, u, opts);
+    }
+    return aplicarPasoLegacy(paso, ui, opts);
+  }
+
+  function aplicarPasoLegacy(paso, ui, opts) {
     const instant = opts && opts.instantaneo;
     const BD = global.BancoDoc;
     const BS = global.BancoSerial;
@@ -110,7 +158,9 @@
       });
       if (listaKey !== estadoVista.listaKey) {
         pintarListaPorIds(ui.listaEl, paso.listaIds, paso.resaltar, paso.listaPunteros, {
-          ordenada: paso.tipo === "fin" || (paso.titulo && /ordenad|fusión terminada|lista ordenada/i.test(paso.titulo + (paso.decision || ""))),
+          ordenada:
+            paso.tipo === "fin" ||
+            (paso.titulo && /ordenad|fusión terminada|lista ordenada/i.test(paso.titulo + (paso.decision || ""))),
         });
         estadoVista.listaKey = listaKey;
       } else {
@@ -187,6 +237,20 @@
   }
 
   function pintarListaPorIds(contenedor, ids, resaltar, listaPunteros, opciones) {
+    const canvasUni = document.getElementById("canvasUnificado");
+    if (canvasUni && usaUnificado({ canvas: canvasUni })) {
+      const uiUni = { canvas: canvasUni };
+      if (!ids || !ids.length) {
+        global.BancoVisualUnificado.pintarVacio(uiUni);
+        return;
+      }
+      return global.BancoVisualUnificado.aplicarPaso(
+        { listaIds: ids, resaltar, listaPunteros },
+        uiUni,
+        { instantaneo: true }
+      );
+    }
+
     const op = opciones || {};
     const set = new Set((resaltar || []).map(Number));
     const porId = new Map();
@@ -197,8 +261,7 @@
     });
 
     const ordenada =
-      op.ordenada ||
-      (ids.length > 1 && ids.every((v, i) => i === 0 || ids[i - 1] <= v));
+      op.ordenada || (ids.length > 1 && ids.every((v, i) => i === 0 || ids[i - 1] <= v));
 
     let fila = contenedor.querySelector(".lista-reporte-fila");
     let hint = contenedor.querySelector(".lista-orden-ok");
@@ -272,7 +335,8 @@
         if (!flecha) {
           flecha = document.createElement("span");
           flecha.className = "flecha flecha-reporte";
-          flecha.innerHTML = '<span class="flecha-linea">→</span><span class="flecha-txt">siguiente</span>';
+          flecha.innerHTML =
+            '<span class="flecha-linea">→</span><span class="flecha-txt">siguiente</span>';
           inner.appendChild(flecha);
         }
       } else if (flecha) {

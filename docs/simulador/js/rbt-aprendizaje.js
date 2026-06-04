@@ -173,6 +173,80 @@
     "del-sobrino-int-antes": [10, 25, 30],
   };
 
+  /** Chips en diagramas Antes/Después (comparadores y diagrama solo). */
+  const ROLES_DIAGRAMA = {
+    "ins-tio-antes": [
+      { cuenta: 10, label: "A abuelo", color: "#94a3b8", ox: -44 },
+      { cuenta: 5, label: "P padre", color: "#94a3b8", ox: 44 },
+      { cuenta: 15, label: "T tío", color: "#f472b6", ox: 0 },
+      { cuenta: 3, label: "N nuevo", color: "#fbbf24", ox: 0 },
+    ],
+    "ins-tio-despues": [
+      { cuenta: 10, label: "A abuelo", color: "#fbbf24", ox: 0 },
+      { cuenta: 5, label: "P padre", color: "#94a3b8", ox: -40 },
+      { cuenta: 15, label: "T tío", color: "#f472b6", ox: 40 },
+    ],
+    "ins-triangulo-antes": [
+      { cuenta: 30, label: "A abuelo", color: "#94a3b8", ox: 0 },
+      { cuenta: 10, label: "P padre", color: "#94a3b8", ox: -48 },
+      { cuenta: 20, label: "N nuevo", color: "#fbbf24", ox: 48 },
+    ],
+    "ins-triangulo-despues": [
+      { cuenta: 20, label: "A (raíz)", color: "#94a3b8", ox: 0 },
+      { cuenta: 10, label: "P", color: "#94a3b8", ox: -44 },
+      { cuenta: 30, label: "N", color: "#fbbf24", ox: 44 },
+    ],
+    "ins-linea-antes": [
+      { cuenta: 10, label: "A abuelo", color: "#94a3b8", ox: -48 },
+      { cuenta: 20, label: "P padre", color: "#94a3b8", ox: 0 },
+      { cuenta: 30, label: "N nuevo", color: "#fbbf24", ox: 48 },
+    ],
+    "ins-linea-despues": [
+      { cuenta: 20, label: "A (raíz)", color: "#94a3b8", ox: 0 },
+      { cuenta: 10, label: "P", color: "#94a3b8", ox: -44 },
+      { cuenta: 30, label: "N", color: "#fbbf24", ox: 44 },
+    ],
+    "rot-izq-antes": [{ cuenta: 30, label: "pivote", color: "#a78bfa", ox: 0 }],
+    "rot-izq-despues": [{ cuenta: 50, label: "pivote", color: "#a78bfa", ox: 0 }],
+    "rot-der-antes": [{ cuenta: 50, label: "pivote", color: "#a78bfa", ox: 0 }],
+    "rot-der-despues": [{ cuenta: 30, label: "pivote", color: "#a78bfa", ox: 0 }],
+    "del-2hijos": [
+      { cuenta: 20, label: "V a borrar", color: "#fbbf24", ox: 0 },
+      { cuenta: 25, label: "sucesor", color: "#22d3ee", ox: 44 },
+    ],
+    "del-herm-rojo-antes": [
+      { cuenta: 10, label: "P padre", color: "#94a3b8", ox: -44 },
+      { cuenta: 15, label: "H hermano", color: "#fb923c", ox: 44 },
+    ],
+    "del-herm-rojo-despues": [
+      { cuenta: 15, label: "H hermano", color: "#fb923c", ox: 0 },
+      { cuenta: 10, label: "P padre", color: "#94a3b8", ox: -48 },
+    ],
+    "del-sobrinos-negros-antes": [
+      { cuenta: 20, label: "P padre", color: "#94a3b8", ox: -48 },
+      { cuenta: 30, label: "H hermano", color: "#fb923c", ox: 0 },
+      { cuenta: 25, label: "sobrino", color: "#64748b", ox: -36 },
+      { cuenta: 35, label: "sobrino", color: "#64748b", ox: 36 },
+    ],
+    "del-sobrinos-negros-despues": [
+      { cuenta: 20, label: "P (déficit)", color: "#fbbf24", ox: 0 },
+      { cuenta: 30, label: "H hermano", color: "#fb923c", ox: 44 },
+    ],
+    "del-padre-rojo-antes": [
+      { cuenta: 20, label: "P padre", color: "#fbbf24", ox: 0 },
+      { cuenta: 30, label: "H hermano", color: "#fb923c", ox: 44 },
+    ],
+    "del-sobrino-int-antes": [
+      { cuenta: 30, label: "H hermano", color: "#fb923c", ox: 0 },
+      { cuenta: 25, label: "sobrino cercano", color: "#fbbf24", ox: -48 },
+    ],
+    "del-sobrino-ext-antes": [
+      { cuenta: 20, label: "P padre", color: "#94a3b8", ox: -48 },
+      { cuenta: 30, label: "H hermano", color: "#fb923c", ox: 0 },
+      { cuenta: 35, label: "sobrino lejano", color: "#fbbf24", ox: 48 },
+    ],
+  };
+
   function construirArbol(spec) {
     if (!spec) return null;
     const { Cliente, NodoHibrido } = BD();
@@ -379,6 +453,11 @@
 
   function dibujarArbolMini(canvas, idDiagrama) {
     if (!canvas || !idDiagrama) return;
+    const BV = global.BancoVisualUnificado;
+    if (BV && global.gsap) {
+      BV.pintarDiagrama(canvas, idDiagrama, { modo: "arbol" });
+      return;
+    }
     const spec = DIAGRAMAS[idDiagrama];
     const { ctx, w, h } = prepararCanvas(canvas);
 
@@ -414,21 +493,26 @@
   }
 
   function animarMorph(canvas, idAntes, idDespues, alTerminar) {
-    const { ctx, w, h } = prepararCanvas(canvas);
-    const escena = prepararEscena(idAntes, idDespues, w, h);
+    if (canvas._rafMorph) {
+      cancelAnimationFrame(canvas._rafMorph);
+      canvas._rafMorph = null;
+    }
+    const BV = global.BancoVisualUnificado;
+    if (BV && global.gsap) {
+      return BV.morphDiagrama(canvas, idAntes, idDespues, alTerminar);
+    }
+    const escena = prepararEscena(idAntes, idDespues, prepararCanvas(canvas).w, prepararCanvas(canvas).h);
     const t0 = performance.now();
 
     function frame(now) {
       const t = Math.min(1, (now - t0) / DUR_MORPH_MS);
-      global.BancoCanvas.preparar(
-        canvas,
-        parseInt(canvas.dataset.alturaLogica, 10) || 220
-      );
+      global.BancoCanvas.preparar(canvas, parseInt(canvas.dataset.alturaLogica, 10) || 220);
       dibujarMorphFrame(canvas.getContext("2d"), escena, t);
       if (t < 1) {
         canvas._rafMorph = requestAnimationFrame(frame);
-      } else if (alTerminar) {
-        alTerminar();
+      } else {
+        canvas._rafMorph = null;
+        if (alTerminar) alTerminar();
       }
     }
 
@@ -528,8 +612,17 @@
       const alt = parseInt(canvas.getAttribute("data-altura"), 10) || 220;
       BancoCanvas.observar(canvas, () => {
         if (canvas._rafMorph) return;
+        const st = global.BancoVisualUnificado && global.BancoVisualUnificado.obtener(canvas);
+        if (st && st.morphActivo) return;
         dibujarArbolMini(canvas, modo === "antes" ? idAntes : idDespues);
       }, alt);
+    }
+    if (global.BancoVisualUnificado && global.gsap) {
+      global.BancoVisualUnificado.init(canvas, {
+        modo: "arbol",
+        alturaLogica: parseInt(canvas.getAttribute("data-altura"), 10) || 220,
+        diagramaMini: true,
+      });
     }
   }
 
@@ -571,50 +664,62 @@
   }
 
   function initPanelPasoAPaso() {
-    if (panelPasosListo) return;
+    if (panelPasosListo && reproductorPasos) return true;
     const panel = document.getElementById("panel-paso-a-paso");
     const canvas = document.getElementById("canvasPasosRbt");
-    if (!panel || !canvas || !global.ReproductorVisual || !global.BancoAnim) return;
+    const contRep = document.getElementById("reproductor-pasos");
+    if (!panel || !canvas || !contRep || !global.ReproductorVisual || !global.BancoAnim) {
+      return false;
+    }
 
-    const ui = { canvas, hashEl: null, listaEl: null };
+    const ui = { canvas, modo: "arbol", hashEl: null, listaEl: null };
+
+    if (global.BancoVisualUnificado) {
+      global.BancoVisualUnificado.init(canvas, { modo: "arbol", alturaLogica: 380 });
+    }
 
     reproductorPasos = new ReproductorVisual({
-      contenedor: document.getElementById("reproductor-pasos"),
-      alPaso: (paso) => {
+      contenedor: contRep,
+      alPaso: (paso, _i, opts) => {
         ultimoPasoPasos = paso;
-        return global.BancoVista.aplicarPaso(paso, ui, { instantaneo: true });
+        const prom = global.BancoVista.aplicarPaso(paso, ui, opts);
+        return prom && typeof prom.then === "function" ? prom : Promise.resolve();
       },
     });
 
-    if (global.BancoCanvas) {
-      BancoCanvas.observar(
-        canvas,
-        () => {
-          if (ultimoPasoPasos) {
-            global.BancoVista.aplicarPaso(ultimoPasoPasos, ui, { instantaneo: true });
-          } else {
-            global.BancoDoc.dibujarArbol(canvas, null, { instantaneo: true });
-          }
-        },
-        300
-      );
-    }
-
     panelPasosListo = true;
+    return true;
   }
 
   function cargarPasoAPaso(opciones) {
-    initPanelPasoAPaso();
-    if (!reproductorPasos) return;
-
     const panel = document.getElementById("panel-paso-a-paso");
     const subt = document.getElementById("rbt-pasos-subtitulo");
+
+    if (!initPanelPasoAPaso() || !reproductorPasos) {
+      if (subt) subt.textContent = "No se pudo iniciar el reproductor (recarga la página).";
+      return;
+    }
+
+    if (panel) {
+      if (panel.tagName === "DETAILS") panel.open = true;
+      panel.classList.add("activo");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    const ui = { canvas: document.getElementById("canvasPasosRbt"), modo: "arbol" };
+    if (global.BancoVisualUnificado && ui.canvas) {
+      global.BancoVisualUnificado.matarTimeline(ui.canvas);
+    }
+    reproductorPasos.pausar();
     let pasos;
 
     if (opciones.tipo === "eliminar") {
       const ins = parseSecuencia(opciones.insertar || "");
       const del = parseInt(String(opciones.eliminar).trim(), 10);
-      if (!ins.length || isNaN(del)) return;
+      if (!ins.length || isNaN(del)) {
+        if (subt) subt.textContent = "Error: secuencia de inserción o cuenta a eliminar inválida.";
+        return;
+      }
       if (subt) {
         subt.textContent =
           (opciones.titulo || "Eliminar") +
@@ -625,10 +730,13 @@
           " (punteros y corregirEliminacion)";
       }
       const r = global.BancoAnim.animarSoloEliminarRBT(ins, del);
-      pasos = filtrarPasos(r.pasos, "eliminar");
+      pasos = filtrarPasos(r.pasos || [], "eliminar");
     } else {
       const nums = parseSecuencia(opciones.secuencia || "");
-      if (!nums.length) return;
+      if (!nums.length) {
+        if (subt) subt.textContent = "Error: escribe al menos un número en la secuencia.";
+        return;
+      }
       if (subt) {
         subt.textContent =
           (opciones.titulo || "Caso") +
@@ -637,19 +745,38 @@
           " (punteros, BST y balanceo como en el simulador)";
       }
       const r = global.BancoAnim.animarSoloRBT(nums);
-      pasos = filtrarPasos(r.pasos, opciones.pasosModo || "ultima");
+      pasos = filtrarPasos(r.pasos || [], opciones.pasosModo || "ultima");
     }
-    reproductorPasos.cargarPasos(pasos).then(() => {
-      if (panel.tagName === "DETAILS") panel.open = true;
-      panel.classList.add("activo");
-      panel.scrollIntoView({ behavior: "smooth", block: "start" });
-      reproductorPasos.reproducir();
-    });
+    if (!pasos.length) {
+      if (subt) subt.textContent = "No se generaron pasos para esta animación.";
+      return;
+    }
+    reproductorPasos
+      .cargarPasos(pasos, { instantaneo: true })
+      .then(() => {
+        if (subt) {
+          subt.textContent =
+            (opciones.titulo || "Animación") +
+            " — " +
+            pasos.length +
+            " pasos. Reproduciendo… (usa ⏸ o la barra)";
+        }
+        reproductorPasos.reproducir();
+      })
+      .catch((err) => {
+        console.error("Paso a paso:", err);
+        if (subt) {
+          subt.textContent =
+            "Error al cargar la animación. Prueba recargar (F5) o abre la consola (F12).";
+        }
+      });
   }
 
   function initBotonesPasoAPaso() {
     document.querySelectorAll(".rbt-btn-pasos").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        initPanelPasoAPaso();
         const casoDel = btn.getAttribute("data-caso-eliminar");
         if (casoDel && CASOS_ELIMINAR[casoDel]) {
           const c = CASOS_ELIMINAR[casoDel];
@@ -678,10 +805,24 @@
 
     document.querySelectorAll("canvas[data-diagram-solo]").forEach((canvas) => {
       const id = canvas.getAttribute("data-diagram-solo");
+      const alt = parseInt(canvas.getAttribute("data-altura"), 10) || 220;
       const dibujar = () => dibujarArbolMini(canvas, id);
-      dibujar();
+      if (global.BancoVisualUnificado) {
+        global.BancoVisualUnificado.init(canvas, { modo: "arbol", alturaLogica: alt, diagramaMini: true });
+      }
+      if (typeof IntersectionObserver !== "undefined") {
+        const obs = new IntersectionObserver(
+          (entries) => {
+            if (entries[0] && entries[0].isIntersecting) dibujar();
+          },
+          { threshold: 0.05 }
+        );
+        obs.observe(canvas);
+        canvas._diagramObs = obs;
+      } else {
+        dibujar();
+      }
       if (global.BancoCanvas) {
-        const alt = parseInt(canvas.getAttribute("data-altura"), 10) || 200;
         BancoCanvas.observar(canvas, dibujar, alt);
       }
     });
@@ -689,12 +830,14 @@
     document.querySelectorAll("details.rbt-grupo").forEach((grupo) => {
       grupo.addEventListener("toggle", () => {
         if (!grupo.open) return;
-        grupo.querySelectorAll(".rbt-comparador").forEach((c) => {
-          const btn = c.querySelector('[data-modo="antes"]');
-          if (btn) btn.click();
-        });
-        grupo.querySelectorAll("canvas[data-diagram-solo]").forEach((canvas) => {
-          dibujarArbolMini(canvas, canvas.getAttribute("data-diagram-solo"));
+        requestAnimationFrame(() => {
+          grupo.querySelectorAll(".rbt-comparador").forEach((c) => {
+            const btn = c.querySelector('[data-modo="antes"]');
+            if (btn) btn.click();
+          });
+          grupo.querySelectorAll("canvas[data-diagram-solo]").forEach((canvas) => {
+            dibujarArbolMini(canvas, canvas.getAttribute("data-diagram-solo"));
+          });
         });
       });
     });
@@ -702,6 +845,8 @@
 
   global.RbtAprendizaje = {
     DIAGRAMAS,
+    RESALTAR,
+    ROLES_DIAGRAMA,
     construirArbol,
     dibujarArbolMini,
     animarMorph,

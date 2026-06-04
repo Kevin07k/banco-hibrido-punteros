@@ -21,8 +21,44 @@
     <h1>Casos del árbol rojo-negro</h1>
     <p class="subtitulo">
       <strong>Ver cambio</strong> = morph rápido antes → después en cada caso.
-      <strong>Paso a paso</strong> = punteros en el panel superior (abre al pulsar el botón en un caso).
+      <strong>Paso a paso</strong> = punteros y etiquetas en el panel superior (abre al pulsar ▶ Paso a paso).
+      Consulta el <a href="#rbt-glosario">glosario de roles</a> (N, P, T, A, H, V).
     </p>
+
+    <article class="tarjeta rbt-glosario" id="rbt-glosario">
+      <h2 style="margin-top:0;font-size:1.15rem">Glosario de punteros en el canvas</h2>
+      <dl class="rbt-glosario-lista">
+        <dt><span class="rbt-chip-ej n">N</span> Nuevo / actual</dt>
+        <dd>Nodo recién insertado o puntero <code>actual</code> del algoritmo (etiqueta ámbar).</dd>
+        <dt><span class="rbt-chip-ej p">P</span> Padre</dt>
+        <dd>Padre de N en la violación de inserción, o padre de V en eliminación (gris).</dd>
+        <dt><span class="rbt-chip-ej t">T</span> Tío</dt>
+        <dd>Hijo del abuelo opuesto a P; en el <strong>Caso 3</strong> si T es rojo se recolorea (rosa).</dd>
+        <dt><span class="rbt-chip-ej a">A</span> Abuelo</dt>
+        <dd>Padre de P; pivote de rotaciones Zig-Zig en inserción (gris).</dd>
+        <dt><span class="rbt-chip-ej h">H</span> Hermano</dt>
+        <dd>Hijo de P del lado opuesto a V tras borrar un negro; clave en eliminación (naranja).</dd>
+        <dt><span class="rbt-chip-ej v">V</span> Víctima / doble negro</dt>
+        <dd>Posición del «hueco negro extra» (hijo null o nodo subido) en <code>corregirEliminacion</code>.</dd>
+      </dl>
+      <p class="nota" style="margin-bottom:0">
+        En comparadores <em>Antes/Después</em> las mismas etiquetas aparecen en los diagramas estáticos.
+        En <strong>Paso a paso</strong> el motor las actualiza en cada paso; el recuadro amarillo del reproductor resume la idea del paso (estilo visualizador didáctico).
+      </p>
+    </article>
+
+    <article class="tarjeta rbt-como-leer">
+      <h2 style="margin-top:0;font-size:1.15rem">Cómo leer cada caso</h2>
+      <p class="rbt-explicacion-lead" style="margin-bottom:0.75rem">
+        Como en un visualizador paso a paso: primero ocurre la operación (insertar o borrar), luego el algoritmo detecta si algo «no cuadra» y aplica la corrección.
+      </p>
+      <ul class="rbt-explicacion-lista">
+        <li><span class="rbt-eti rbt-eti-violacion">Inserción</span> Todo nodo nuevo entra <strong>rojo</strong>. Si el padre es negro, no hay problema. Si el padre es rojo, hay que mirar al <strong>tío</strong> o rotar.</li>
+        <li><span class="rbt-eti rbt-eti-violacion">Eliminación</span> Si se borra un nodo <strong>negro</strong>, queda un «doble negro» (un camino con un negro de menos). Se arregla con el <strong>hermano</strong> y sus sobrinos.</li>
+        <li><span class="rbt-eti rbt-eti-solucion">Rotación</span> Cuando el texto dice «rotación detectada», el árbol se reordena como en un BST; los colores se ajustan al final del caso.</li>
+        <li><span class="rbt-eti">En esta página</span> Cada tarjeta resume <em>situación → comprobación → solución → qué queda</em>. El canvas y el reproductor muestran el mismo caso con números concretos.</li>
+      </ul>
+    </article>
 
     <details class="tarjeta rbt-panel-pasos" id="panel-paso-a-paso">
       <summary class="rbt-panel-pasos-summary">
@@ -31,19 +67,23 @@
       </summary>
       <div class="rbt-panel-pasos-body">
         <p id="rbt-pasos-subtitulo" class="nota rbt-pasos-sub">
-          Pulsa <strong>▶ Paso a paso</strong> en un caso de abajo.
+          Pulsa <strong>▶ Paso a paso</strong> en un caso de abajo. El panel mostrará título, decisión, detalle técnico y un resumen en lenguaje claro (recuadro amarillo).
         </p>
         <div id="reproductor-pasos"></div>
         <div class="zona-animacion zona-animacion-compacta">
           <div class="canvas-contenedor">
-            <canvas id="canvasPasosRbt" class="canvas-arbol" data-altura-logica="300"></canvas>
+            <canvas id="canvasPasosRbt" class="canvas-arbol" data-altura-logica="380"></canvas>
           </div>
           <div class="leyenda leyenda-compacta">
             <span class="l-rojo">Rojo</span>
             <span class="l-negro">Negro</span>
-            <span>Ámbar = actual</span>
-            <span>Verde = hijo</span>
-            <span>Lila = pivote</span>
+            <span>Ámbar = N / actual / V</span>
+            <span>Verde = hijo en BST</span>
+            <span>Cian = clave</span>
+            <span>Lila = pivote rotación</span>
+            <span>Rosa = T tío</span>
+            <span>Naranja = H hermano</span>
+            <span>Gris = P padre · A abuelo</span>
           </div>
         </div>
       </div>
@@ -65,6 +105,10 @@
 
         <article class="rbt-caso rbt-caso-ancho">
           <h3>Reglas en <code>ArbolRojoNegro.java</code></h3>
+          <p class="rbt-caso-texto">
+            Propiedades que el código mantiene (como en cualquier visualizador RBT): BST por cuenta;
+            raíz negra; hojas negras; no dos rojos seguidos; mismos negros en todos los caminos a hoja.
+          </p>
           <div class="rbt-reglas-grid">
             <div class="rbt-regla"><span class="rbt-regla-num">1</span><span>Nodo nuevo → <strong>rojo</strong> (salvo árbol vacío → raíz negra).</span></div>
             <div class="rbt-regla"><span class="rbt-regla-num">2</span><span><code>insertarEnArbol</code> — BST por cuenta.</span></div>
@@ -76,6 +120,14 @@
         <article class="rbt-caso">
           <h3>Rotación izquierda</h3>
           <p class="rbt-caso-texto">El hijo derecho sube; el nodo pivote pasa a ser su hijo izquierdo.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Sube el hijo derecho del pivote; el pivote queda como su hijo izquierdo (misma idea que en un BST).</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Situación</span> Un nodo tiene hijo derecho y hay que reorganizar la rama.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Acción</span> <code>rotarIzquierda(pivote)</code> — en el canvas el chip <em>pivote</em> (lila) marca quién baja.</li>
+              <li><span class="rbt-eti">Después</span> La forma del BST se mantiene; en RBT esta rotación suele ir seguida de recolorar.</li>
+            </ul>
+          </div>
           <div class="rbt-comparador"
             data-antes="rot-izq-antes"
             data-despues="rot-izq-despues"
@@ -101,6 +153,13 @@
         <article class="rbt-caso">
           <h3>Rotación derecha</h3>
           <p class="rbt-caso-texto">Espejo: sube el hijo izquierdo.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Espejo de la rotación izquierda: sube el hijo izquierdo del pivote.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-solucion">Acción</span> <code>rotarDerecha(pivote)</code>.</li>
+              <li><span class="rbt-eti">Uso en RBT</span> Casos 4–5 de inserción y 5–6 de eliminación cuando el visualizador indica «rotación detectada».</li>
+            </ul>
+          </div>
           <div class="rbt-comparador"
             data-antes="rot-der-antes"
             data-despues="rot-der-despues"
@@ -132,10 +191,24 @@
         <span class="rbt-grupo-sub">Vacío · padre negro · tío rojo · triángulo · línea</span>
       </summary>
       <div class="rbt-grupo-body rbt-grupo-body-dos-col">
+        <p class="rbt-grupo-intro">
+          Tras insertar en el BST, el nodo nuevo es <strong>rojo</strong>. Solo si el padre también es rojo entra
+          <code>corregirInsercion</code>. El flujo típico: ¿tío rojo? → recolorar; si no → ¿triángulo o línea? → rotar.
+        </p>
 
-        <article class="rbt-caso">
+        <article class="rbt-caso rbt-caso-sin-diagrama">
           <h3>Caso 1 — Árbol vacío</h3>
           <p class="rbt-caso-texto">N es la raíz → pintar <strong>NEGRO</strong>. No entra al <code>while</code> de balanceo.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">El primer nodo es rojo al crearse, pero la <strong>raíz debe ser negra</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Situación</span> Árbol vacío → un solo nodo.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Pintar la raíz de negro. No hay padre ni tío.</li>
+              <li><span class="rbt-eti">Después</span> El árbol es válido; no se llama al bucle de balanceo.</li>
+            </ul>
+            <p class="rbt-explicacion-demo">Secuencia: <code>42</code></p>
+          </div>
+          <p class="nota rbt-solo-pasos">Sin diagrama estático — usa <strong>Paso a paso</strong> para ver el único nodo.</p>
           <button type="button" class="btn btn-primario rbt-btn-pasos"
             data-secuencia="42"
             data-titulo-caso="Inserción — Caso 1"
@@ -145,6 +218,14 @@
         <article class="rbt-caso">
           <h3>Caso 2 — Padre negro</h3>
           <p class="rbt-caso-texto">No hay dos rojos seguidos; <code>corregirInsercion</code> termina sin cambios.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Insertaste un nodo rojo y su padre es <strong>negro</strong>: no hay dos rojos seguidos.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Comprobación</span> ¿Padre rojo? No → el árbol ya cumple las propiedades.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Ninguna: <code>corregirInsercion</code> termina de inmediato.</li>
+            </ul>
+            <p class="rbt-explicacion-demo">Secuencia: <code>50, 30</code></p>
+          </div>
           <button type="button" class="btn btn-primario rbt-btn-pasos"
             data-secuencia="50, 30"
             data-titulo-caso="Inserción — Caso 2"
@@ -154,6 +235,16 @@
         <article class="rbt-caso">
           <h3>Caso 3 — Tío rojo (recolorar)</h3>
           <p class="rbt-caso-texto">P y T → negro, A → rojo. El problema sube a A (recursión).</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Insertaste un nodo rojo y su <strong>padre también es rojo</strong>. Además, el <strong>tío es rojo</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-violacion">Violación</span> Dos rojos consecutivos (hijo y padre).</li>
+              <li><span class="rbt-eti">Comprobación</span> ¿Tío rojo? Sí → no rotar todavía.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Padre y tío a <strong>negro</strong>; abuelo a <strong>rojo</strong>.</li>
+              <li><span class="rbt-eti">Después</span> El posible conflicto sube al abuelo; puede repetirse hacia la raíz.</li>
+            </ul>
+            <p class="rbt-explicacion-demo">En <em>Antes</em> verás <span class="rbt-chip-ej t">T</span> <span class="rbt-chip-ej p">P</span> <span class="rbt-chip-ej a">A</span> · Secuencia <code>10, 5, 15, 3</code></p>
+          </div>
           <div class="rbt-comparador"
             data-antes="ins-tio-antes"
             data-despues="ins-tio-despues"
@@ -179,6 +270,15 @@
         <article class="rbt-caso">
           <h3>Caso 4 — Triángulo (Zig-Zag)</h3>
           <p class="rbt-caso-texto">Tío negro/nulo, forma triángulo → <strong>rotación en P</strong>; luego Caso 5.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Padre rojo, tío <strong>negro o inexistente</strong>, y los tres nodos forman un <strong>triángulo</strong> (no una línea).</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-violacion">Violación</span> Dos rojos seguidos; el tío no ayuda a recolorar.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Rotación detectada</span> Primero rotar en el <strong>padre P</strong> (Zig-Zag) para alinear N–P–A.</li>
+              <li><span class="rbt-eti">Después</span> En el siguiente paso aplica el Caso 5 (rotación en el abuelo).</li>
+            </ul>
+            <p class="rbt-explicacion-demo">Secuencia <code>30, 10, 20</code> · Tras ▶ Ver cambio verás la forma final ya balanceada.</p>
+          </div>
           <div class="rbt-comparador"
             data-antes="ins-triangulo-antes"
             data-despues="ins-triangulo-despues"
@@ -204,6 +304,15 @@
         <article class="rbt-caso">
           <h3>Caso 5 — Línea (Zig-Zig)</h3>
           <p class="rbt-caso-texto">N y P alineados → <strong>rotación en A</strong> + P negro, A rojo.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Tío negro y N, padre y abuelo en <strong>línea recta</strong> (misma dirección izquierda o derecha).</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Comprobación</span> Ya no hay triángulo; los tres están alineados (Zig-Zig).</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Rotar en el <strong>abuelo A</strong>; padre → negro, abuelo → rojo (según el lado).</li>
+              <li><span class="rbt-eti">Después</span> Desaparece la violación local; la raíz se fuerza a negro al final de la inserción.</li>
+            </ul>
+            <p class="rbt-explicacion-demo">Secuencia <code>10, 20, 30</code></p>
+          </div>
           <div class="rbt-comparador"
             data-antes="ins-linea-antes"
             data-despues="ins-linea-despues"
@@ -235,6 +344,11 @@
         <span class="rbt-grupo-sub">Raíz · hermano rojo · sobrinos · triángulo · lejano rojo</span>
       </summary>
       <div class="rbt-grupo-body rbt-grupo-body-dos-col">
+        <p class="rbt-grupo-intro">
+          Al borrar, si el nodo era <strong>negro</strong> queda un «doble negro» (falta un negro en un camino).
+          <code>corregirEliminacion</code> usa el <strong>hermano H</strong> del hueco y los <strong>sobrinos</strong> (hijos de H):
+          ¿hermano rojo? → rotar; ¿sobrinos negros? → recolorar o rotar según el padre.
+        </p>
 
         <article class="rbt-caso rbt-caso-ancho">
           <h3>Preámbulo: dos hijos → sucesor</h3>
@@ -242,8 +356,16 @@
             No es un caso de balanceo: intercambio de datos con el sucesor y baja del nodo hoja.
             Si era <strong>negro</strong>, empieza el doble negro (casos 1–6).
           </p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">El nodo a borrar tiene <strong>dos hijos</strong>: no se elimina directamente su estructura.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Situación</span> Hay que borrar un nodo interno del BST.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Copiar la clave del <strong>sucesor</strong> (mínimo del subárbol derecho) y borrar la hoja del sucesor.</li>
+              <li><span class="rbt-eti">Después</span> Si esa hoja era negra, empieza el doble negro y los casos 1–6 de eliminación.</li>
+            </ul>
+          </div>
           <div class="rbt-comparador-canvas-wrap rbt-solo-diagrama">
-            <canvas data-diagram-solo="del-2hijos" data-altura="180"></canvas>
+            <canvas data-diagram-solo="del-2hijos" data-altura="300"></canvas>
           </div>
           <button type="button" class="btn btn-primario rbt-btn-pasos"
             data-caso-eliminar="del-2hijos"
@@ -251,9 +373,18 @@
             data-pasos="eliminar">▶ Paso a paso</button>
         </article>
 
-        <article class="rbt-caso">
+        <article class="rbt-caso rbt-caso-sin-diagrama">
           <h3>Caso 1 — Doble negro en la raíz</h3>
           <p class="rbt-caso-texto">El déficit sube hasta la cima → quitar el negro extra; termina.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">El «hueco negro extra» subió hasta la <strong>raíz</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Situación</span> V representa el déficit en la cima; no hay hermano arriba.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> La raíz se deja negra normal: se elimina el negro «de más» conceptual.</li>
+              <li><span class="rbt-eti">Después</span> Termina <code>corregirEliminacion</code> para esta eliminación.</li>
+            </ul>
+          </div>
+          <p class="nota rbt-solo-pasos">Sin diagrama Antes/Después — solo animación con <strong>Paso a paso</strong>.</p>
           <button type="button" class="btn btn-primario rbt-btn-pasos"
             data-caso-eliminar="del-raiz"
             data-titulo-caso="Eliminación — Caso 1"
@@ -263,6 +394,14 @@
         <article class="rbt-caso">
           <h3>Caso 2 — Hermano rojo</h3>
           <p class="rbt-caso-texto">Rotar padre hacia V + recolorear; reconfigura para casos 3–6.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Hay doble negro en V y el <strong>hermano H es rojo</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Comprobación</span> Hermano rojo → preparar el escenario para casos 3–6.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Rotación detectada</span> Rotar el padre P; H pasa a negro, P a rojo.</li>
+              <li><span class="rbt-eti">Después</span> El doble negro <em>sigue</em>, pero ahora los sobrinos son alcanzables para el siguiente caso.</li>
+            </ul>
+          </div>
           <div class="rbt-comparador"
             data-antes="del-herm-rojo-antes"
             data-despues="del-herm-rojo-despues"
@@ -287,6 +426,15 @@
         <article class="rbt-caso">
           <h3>Caso 3 — Sobrinos negros, padre negro</h3>
           <p class="rbt-caso-texto">H → rojo; el doble negro sube al padre (recursión).</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Hermano negro, <strong>ambos sobrinos negros</strong> y padre <strong>negro</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti">Comprobación</span> No se puede rotar con sobrinos negros; el padre no puede «absorber» solo.</li>
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> Pintar H de <strong>rojo</strong>; el déficit sube al padre P.</li>
+              <li><span class="rbt-eti">Después</span> Se repite la corrección más arriba (como subir el problema en inserción).</li>
+            </ul>
+            <p class="rbt-explicacion-demo">En <em>Antes</em>: P, H y sobrinos etiquetados.</p>
+          </div>
           <div class="rbt-comparador"
             data-antes="del-sobrinos-negros-antes"
             data-despues="del-sobrinos-negros-despues"
@@ -311,6 +459,13 @@
         <article class="rbt-caso">
           <h3>Caso 4 — Sobrinos negros, padre rojo</h3>
           <p class="rbt-caso-texto">H → rojo, padre → negro; absorbe el doble negro. Termina.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Igual que el Caso 3 (sobrinos negros), pero el <strong>padre es rojo</strong>.</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-solucion">Solución</span> H → rojo; padre → <strong>negro</strong>.</li>
+              <li><span class="rbt-eti">Después</span> El padre rojo «absorbe» el doble negro: <strong>termina</strong> el balanceo de esta bajada.</li>
+            </ul>
+          </div>
           <div class="rbt-comparador"
             data-antes="del-padre-rojo-antes"
             data-despues="del-padre-rojo-despues"
@@ -335,6 +490,13 @@
         <article class="rbt-caso">
           <h3>Caso 5 — Triángulo (sobrino cercano rojo)</h3>
           <p class="rbt-caso-texto">Rotación sobre H + recolorear → cae en Caso 6.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">Sobrino <strong>cercano</strong> a V rojo y sobrino <strong>lejano</strong> negro (forma triángulo en sobrinos).</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-solucion">Rotación detectada</span> Rotar sobre H para alinear sobrinos.</li>
+              <li><span class="rbt-eti">Después</span> En el paso siguiente entra el Caso 6 (sobrino lejano rojo).</li>
+            </ul>
+          </div>
           <div class="rbt-comparador"
             data-antes="del-sobrino-int-antes"
             data-despues="del-sobrino-int-despues"
@@ -359,6 +521,14 @@
         <article class="rbt-caso">
           <h3>Caso 6 — Sobrino lejano rojo</h3>
           <p class="rbt-caso-texto">Rotar padre hacia V + colores finales; doble negro disuelto.</p>
+          <div class="rbt-explicacion">
+            <p class="rbt-explicacion-lead">El sobrino <strong>lejano</strong> a V es rojo (caso favorable para cerrar el déficit).</p>
+            <ul class="rbt-explicacion-lista">
+              <li><span class="rbt-eti rbt-eti-solucion">Rotación detectada</span> Rotar el padre P hacia V; H hereda color de P; P y sobrino lejano → negro.</li>
+              <li><span class="rbt-eti">Después</span> Desaparece el doble negro; el árbol cumple altura negra otra vez.</li>
+            </ul>
+            <p class="rbt-explicacion-demo">En <em>Antes</em>: sobrino lejano, H y P etiquetados.</p>
+          </div>
           <div class="rbt-comparador"
             data-antes="del-sobrino-ext-antes"
             data-despues="del-sobrino-ext-despues"
@@ -383,10 +553,13 @@
     </details>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="js/nucleo.js"></script>
   <script src="js/canvas-hd.js"></script>
   <script src="js/serializacion.js"></script>
   <script src="js/motor-animacion.js"></script>
+  <script src="js/arbol-transicion.js"></script>
+  <script src="js/sistema-visual-unificado.js"></script>
   <script src="js/vista.js"></script>
   <script src="js/reproductor.js"></script>
   <script src="js/rbt-aprendizaje.js"></script>

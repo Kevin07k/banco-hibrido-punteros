@@ -331,6 +331,17 @@ select:focus {
   overflow-y: hidden;
 }
 
+.canvas-unificado-wrap {
+  min-height: 480px;
+  overflow-x: auto;
+}
+
+.canvas-unificado {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius);
+}
+
 .canvas-contenedor canvas {
   vertical-align: top;
 }
@@ -984,7 +995,8 @@ pre,
 }
 
 .zona-animacion-compacta .canvas-contenedor {
-  max-height: 300px;
+  max-height: none;
+  min-height: 320px;
 }
 
 .leyenda-compacta {
@@ -1073,11 +1085,161 @@ article.rbt-caso h3 {
   font-size: 1rem;
 }
 
+.rbt-glosario {
+  margin-bottom: 1.25rem;
+}
+
+.rbt-glosario-lista {
+  display: grid;
+  gap: 0.65rem 1rem;
+  margin: 0.75rem 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .rbt-glosario-lista {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+.rbt-glosario-lista dt {
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rbt-glosario-lista dd {
+  margin: 0;
+  color: var(--texto-secundario, #94a3b8);
+  line-height: 1.45;
+}
+
+.rbt-chip-ej {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  color: #0f172a;
+}
+
+.rbt-chip-ej.n { background: #fbbf24; }
+.rbt-chip-ej.p,
+.rbt-chip-ej.a { background: #94a3b8; }
+.rbt-chip-ej.t { background: #f472b6; }
+.rbt-chip-ej.h { background: #fb923c; }
+.rbt-chip-ej.v { background: #fbbf24; }
+
+.rbt-caso-detalle,
+.rbt-explicacion {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-left: 3px solid var(--acento, #38bdf8);
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--texto-secundario, #94a3b8);
+}
+
+.rbt-caso-detalle strong,
+.rbt-explicacion strong {
+  color: var(--texto, #e2e8f0);
+}
+
+.rbt-explicacion-lead {
+  margin: 0 0 0.6rem;
+  color: var(--texto, #e2e8f0);
+  font-size: 0.93rem;
+}
+
+.rbt-explicacion-lista {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  list-style: none;
+}
+
+.rbt-explicacion-lista > li {
+  position: relative;
+  margin-bottom: 0.45rem;
+  padding-left: 0.15rem;
+}
+
+.rbt-explicacion-lista > li::before {
+  content: "→";
+  position: absolute;
+  left: -1.1rem;
+  color: var(--acento, #38bdf8);
+  font-weight: 700;
+}
+
+.rbt-eti {
+  display: inline-block;
+  min-width: 5.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #7dd3fc;
+  margin-right: 0.35rem;
+}
+
+.rbt-eti-violacion { color: #fca5a5; }
+.rbt-eti-solucion { color: #86efac; }
+
+.rbt-explicacion-demo {
+  margin: 0.55rem 0 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.rbt-grupo-intro {
+  grid-column: 1 / -1;
+  margin: 0 0 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.rbt-grupo-intro strong {
+  color: var(--texto, #e2e8f0);
+}
+
+.reproductor-guia {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.75rem;
+  background: rgba(251, 191, 36, 0.1);
+  border-left: 3px solid #fbbf24;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.reproductor-guia:empty {
+  display: none;
+}
+
 .rbt-caso-texto {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.rbt-solo-pasos {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+}
+
+article.rbt-caso-sin-diagrama {
+  min-height: auto;
 }
 
 .rbt-comparador {
@@ -1106,8 +1268,7 @@ article.rbt-caso h3 {
   max-height: 220px;
 }
 
-.rbt-comparador-canvas-wrap canvas,
-.rbt-solo-diagrama canvas {
+.rbt-comparador-canvas-wrap canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -1115,8 +1276,16 @@ article.rbt-caso h3 {
 }
 
 .rbt-solo-diagrama {
-  height: 180px;
-  max-height: 180px;
+  min-height: 300px;
+  height: 300px;
+  max-height: none;
+  overflow: visible;
+}
+
+.rbt-solo-diagrama canvas {
+  display: block;
+  width: 100%;
+  min-height: 300px;
 }
 
 @media (min-width: 768px) {

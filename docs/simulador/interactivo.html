@@ -28,46 +28,30 @@
     <div id="reproductor"></div>
 
     <div class="zona-animacion">
-      <h2 style="margin-top:0">Tabla hash</h2>
-      <div id="hashViz" class="tabla-hash"></div>
-
-      <div class="grid-2" style="margin-top:1rem">
-        <section>
-          <h3>Árbol del balde</h3>
-          <div class="pills" id="pillsBalde"></div>
-          <div class="canvas-contenedor">
-            <canvas id="canvasArbol" class="canvas-arbol" data-altura-logica="440"></canvas>
-          </div>
-          <p class="leyenda">
-            <span class="l-rojo">Rojo</span>
-            <span style="margin-left:1rem">Caja ámbar <strong>actual</strong> → nodo del puntero</span>
-            <span style="margin-left:1rem">Verde = arista siguiente (izq/der)</span>
-            <span style="margin-left:1rem">Cian = clave buscada</span>
-          </p>
-        </section>
-        <section class="seccion-reporte">
-          <h3>Reporte — MergeSort</h3>
-          <p class="nota reporte-intro">
-            Arriba: recursión <code>mergeSortLista</code>. Abajo: lista con <code>siguiente</code> en ese momento.
-          </p>
-          <div id="mergeAyuda" class="merge-ayuda" hidden>
-            <span class="merge-ayuda-tipo" id="mergeAyudaTipo">Paso</span>
-            <strong id="mergeAyudaTitulo"></strong>
-            <p id="mergeAyudaDetalle"></p>
-          </div>
-          <div class="canvas-contenedor canvas-merge-wrap">
-            <canvas id="canvasMerge" class="canvas-arbol canvas-merge" data-altura-logica="400"></canvas>
-          </div>
-          <ul class="leyenda-merge-lista">
-            <li><span class="leyenda-cuadro" style="background:#38bdf8"></span> Sublista que se procesa ahora</li>
-            <li><span class="leyenda-cuadro" style="background:#22c55e"></span> Cuenta tomada al fusionar</li>
-            <li><span class="leyenda-cuadro" style="background:#fbbf24"></span> Ya dividida en izquierda | derecha</li>
-            <li><span class="leyenda-cuadro" style="background:#a5b4fc"></span> Comparando dos sublistas</li>
-          </ul>
-          <h4 class="subtitulo-seccion">Lista enlazada (<code>siguiente</code>)</h4>
-          <div id="listaReporte" class="lista-enlazada lista-reporte-scroll"></div>
-        </section>
+      <h2 style="margin-top:0">Visualización unificada</h2>
+      <p class="nota" style="margin-top:0">
+        Tabla hash a la izquierda; árbol y MergeSort a la derecha; lista enlazada a ancho completo abajo.
+        El reporte usa la lista ya armada al insertar (solo MergeSort); desplaza ↔ en la franja lista si hace falta.
+      </p>
+      <div id="mergeAyuda" class="merge-ayuda" hidden>
+        <span class="merge-ayuda-tipo" id="mergeAyudaTipo">Paso</span>
+        <strong id="mergeAyudaTitulo"></strong>
+        <p id="mergeAyudaDetalle"></p>
       </div>
+      <div class="canvas-contenedor canvas-unificado-wrap">
+        <canvas id="canvasUnificado" class="canvas-unificado" data-altura-logica="720"></canvas>
+      </div>
+      <p class="leyenda">
+        <span class="l-rojo">Rojo</span>
+        <span style="margin-left:1rem">Ámbar <strong>actual</strong> → puntero en el árbol</span>
+        <span style="margin-left:1rem">Clic en un casillero del canvas cambia el balde activo</span>
+      </p>
+      <ul class="leyenda-merge-lista">
+        <li><span class="leyenda-cuadro" style="background:#38bdf8"></span> Sublista activa (merge)</li>
+        <li><span class="leyenda-cuadro" style="background:#22c55e"></span> Cuenta tomada al fusionar</li>
+        <li><span class="leyenda-cuadro" style="background:#fbbf24"></span> Dividida izq | der</li>
+        <li><span class="leyenda-cuadro" style="background:#a5b4fc"></span> Comparando sublistas</li>
+      </ul>
     </div>
 
     <section class="tarjeta panel-escenarios" style="margin-top:1rem">
@@ -137,6 +121,7 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="js/nucleo.js"></script>
   <script src="js/canvas-hd.js"></script>
   <script src="js/serializacion.js"></script>
@@ -144,6 +129,7 @@
   <script src="js/escenarios.js"></script>
   <script src="js/motor-animacion.js"></script>
   <script src="js/arbol-transicion.js"></script>
+  <script src="js/sistema-visual-unificado.js"></script>
   <script src="js/vista.js"></script>
   <script src="js/reproductor.js"></script>
   <script>
@@ -158,44 +144,96 @@
     let tamano = 7;
     let baldeActivo = 0;
     let resultadoPendiente = null;
+    let reporte = { cabeza: null, cola: null };
+    let listaIds = [];
+    let reporteOrdenado = false;
 
     const el = (id) => document.getElementById(id);
-    const canvasArbol = el("canvasArbol");
+    const canvasUnificado = el("canvasUnificado");
     const ui = {
-      hashEl: el("hashViz"),
-      canvas: canvasArbol,
-      canvasMerge: el("canvasMerge"),
-      listaEl: el("listaReporte"),
+      canvas: canvasUnificado,
+      modo: "completo",
       formulaEl: el("formula"),
       tamano: 7,
     };
 
-    function redibujarArbolActual(instant) {
-      BD.dibujarArbol(canvasArbol, casilleros[baldeActivo], instant ? { instantaneo: true } : {});
-    }
-
     let ultimoPasoVista = null;
 
-    BancoCanvas.observar(canvasArbol, () => {
-      if (ultimoPasoVista?.casilleros) BV.aplicarPaso(ultimoPasoVista, ui, { instantaneo: true });
-      else redibujarArbolActual(true);
-    }, 440);
+    BancoVisualUnificado.init(canvasUnificado, {
+      modo: "completo",
+      tamano: tamano,
+      alturaLogica: 720,
+      onBaldeClick: (idx) => {
+        baldeActivo = idx;
+        redibujarVistaEstatica(true);
+      },
+    });
 
-    BancoCanvas.observar(el("canvasMerge"), () => {
-      const c = el("canvasMerge");
-      if (ultimoPasoVista?.mergeArbol) {
-        BancoMergeViz.pintarArbolMerge(c, ultimoPasoVista.mergeArbol, { instantaneo: true });
-      } else {
-        BancoMergeViz.pintarArbolMerge(c, null, { instantaneo: true });
+    function enlazarListaReporte() {
+      if (!listaIds.length) {
+        reporte = { cabeza: null, cola: null };
+        return;
       }
-    }, 400);
+      reporte.cabeza = BS.listaDesdeIds(casilleros, listaIds);
+      let c = reporte.cabeza;
+      while (c && c.siguiente) c = c.siguiente;
+      reporte.cola = c;
+    }
+
+    function idsListaVista() {
+      return listaIds.length ? listaIds : BS.serializarLista(reporte.cabeza);
+    }
+
+    function pasoVistaEstatica() {
+      const snap = BS.serializarCasilleros(casilleros);
+      const ids = idsListaVista();
+      return {
+        casilleros: snap,
+        balde: baldeActivo,
+        hashIdx: baldeActivo,
+        tipo: "vista",
+        listaIds: ids,
+        reporteOrdenado,
+      };
+    }
+
+    function redibujarVistaEstatica(instant) {
+      enlazarListaReporte();
+      const ids = idsListaVista();
+      const snap = BS.serializarCasilleros(casilleros);
+
+      if (reproductor._playing && ultimoPasoVista?.casilleros) {
+        const paso = Object.assign({}, ultimoPasoVista, {
+          casilleros: ultimoPasoVista.casilleros,
+          balde: baldeActivo,
+          hashIdx: baldeActivo,
+          listaIds: ids,
+          reporteOrdenado:
+            ultimoPasoVista.reporteOrdenado != null ? ultimoPasoVista.reporteOrdenado : reporteOrdenado,
+        });
+        BV.aplicarPaso(paso, ui, { instantaneo: !!instant });
+        return;
+      }
+
+      BV.aplicarPaso(
+        Object.assign({}, pasoVistaEstatica(), { casilleros: snap, listaIds: ids }),
+        ui,
+        { instantaneo: !!instant }
+      );
+    }
 
     function aplicarResultadoFinal() {
       if (!resultadoPendiente) return;
-      if (resultadoPendiente.ok && resultadoPendiente.casilleros) {
+      if (resultadoPendiente.casilleros) {
         casilleros = BS.sincronizarRaices(resultadoPendiente.casilleros);
-        refrescarEstatico();
       }
+      if (resultadoPendiente.listaIds) listaIds = resultadoPendiente.listaIds;
+      if (resultadoPendiente.reporteOrdenado != null) reporteOrdenado = !!resultadoPendiente.reporteOrdenado;
+      if (resultadoPendiente.reporte) reporte = resultadoPendiente.reporte;
+      if (resultadoPendiente.reporteOrdenado != null) {
+        reporteOrdenado = resultadoPendiente.reporteOrdenado;
+      }
+      refrescarEstatico();
     }
 
     const reproductor = new ReproductorVisual({
@@ -205,7 +243,8 @@
         ui.tamano = tamano;
         if (paso.balde != null) baldeActivo = paso.balde;
         if (paso.hashIdx >= 0) baldeActivo = paso.hashIdx;
-        actualizarPills();
+        if (paso.listaIds && paso.listaIds.length) listaIds = paso.listaIds;
+        if (paso.reporteOrdenado != null) reporteOrdenado = paso.reporteOrdenado;
         actualizarAyudaReporte(paso);
         let op = opts || {};
         if (
@@ -217,7 +256,13 @@
         ) {
           op = Object.assign({}, op, { instantaneo: true });
         }
-        return BV.aplicarPaso(paso, ui, op);
+        const ids =
+          paso.listaIds && paso.listaIds.length ? paso.listaIds : idsListaVista();
+        const pasoDraw = Object.assign({}, paso, {
+          listaIds: ids,
+          reporteOrdenado: paso.reporteOrdenado != null ? paso.reporteOrdenado : reporteOrdenado,
+        });
+        return BV.aplicarPaso(pasoDraw, ui, op);
       },
       alTerminar: aplicarResultadoFinal,
     });
@@ -229,6 +274,10 @@
       casilleros = new Array(t).fill(null);
       baldeActivo = 0;
       resultadoPendiente = null;
+      reporte = { cabeza: null, cola: null };
+      listaIds = [];
+      reporteOrdenado = false;
+      ultimoPasoVista = null;
       reproductor.cargarPasos([]);
       BV.reiniciarCanvasAnimacion(ui);
       refrescarEstatico();
@@ -236,36 +285,11 @@
     }
 
     function refrescarEstatico() {
-      ui.hashEl.innerHTML = BD.renderHash(casilleros, -1);
-      actualizarPills();
-      redibujarArbolActual(true);
+      ui.tamano = tamano;
+      enlazarListaReporte();
+      redibujarVistaEstatica(true);
       el("formula").textContent = "indice = cuenta % " + tamano;
     }
-
-    function actualizarPills() {
-      const cont = el("pillsBalde");
-      cont.innerHTML = "";
-      for (let i = 0; i < tamano; i++) {
-        const p = document.createElement("button");
-        p.type = "button";
-        p.className = "pill" + (i === baldeActivo ? " activa" : "");
-        p.textContent = "[" + i + "]";
-        p.onclick = () => {
-          baldeActivo = i;
-          actualizarPills();
-          redibujarArbolActual();
-        };
-        cont.appendChild(p);
-      }
-    }
-
-    el("hashViz").addEventListener("click", (e) => {
-      const cas = e.target.closest(".casillero");
-      if (!cas) return;
-      baldeActivo = parseInt(cas.dataset.idx, 10);
-      actualizarPills();
-      redibujarArbolActual();
-    });
 
     function cargarAnimacion(pasos, resultado) {
       resultadoPendiente = resultado;
@@ -287,7 +311,7 @@
 
     el("btnInsertar").addEventListener("click", () => {
       const c = clienteForm();
-      const r = BA.animarInsertar(casilleros, tamano, c);
+      const r = BA.animarInsertar(casilleros, tamano, c, { listaIds, cabeza: reporte.cabeza, cola: reporte.cola });
       if (r.ok) el("msg").textContent = "Reproduce los pasos; al final se aplica la inserción.";
       else el("msg").textContent = "Cuenta duplicada (ver paso final).";
       cargarAnimacion(r.pasos, r);
@@ -315,11 +339,11 @@
         return;
       }
       panel.hidden = false;
-      const tipo =
+        const tipo =
         paso.tipo === "encadenar"
-          ? "Fase 1 · Inorden"
+          ? "Inorden (solo sin lista previa)"
           : paso.tipo === "merge"
-            ? "Fase 2 · MergeSort"
+            ? "MergeSort"
             : "Reporte";
       el("mergeAyudaTipo").textContent = tipo;
       el("mergeAyudaTitulo").textContent = paso.titulo || paso.decision || "";
@@ -331,9 +355,22 @@
         el("msg").textContent = "Primero carga un escenario o inserta clientes.";
         return;
       }
-      const r = BA.animarReporte(casilleros, tamano);
-      el("msg").textContent = "Reporte: inorden por balde + MergeSort (solo puntero siguiente).";
-      cargarAnimacion(r.pasos, { ok: true, casilleros: r.casilleros });
+      const r = BA.animarReporte(casilleros, tamano, {
+        listaIds,
+        reporteOrdenado,
+      });
+      el("msg").textContent = listaIds.length
+        ? reporteOrdenado
+          ? "Reporte ya ordenado (O(1)) — sin recorrer baldes."
+          : "Reporte: MergeSort sobre la lista armada al insertar (sin inorden)."
+        : "Reporte: inorden por balde + MergeSort (bosque sin lista previa).";
+      cargarAnimacion(r.pasos, {
+        ok: true,
+        casilleros: r.casilleros,
+        listaIds: r.listaIds,
+        reporte: r.reporte,
+        reporteOrdenado: r.reporteOrdenado,
+      });
     }
 
     el("btnReporte").addEventListener("click", animarReporteActual);
@@ -370,6 +407,10 @@
 
       const built = BE.construirCasilleros(esc);
       casilleros = built.casilleros;
+      listaIds = built.listaIds || [];
+      reporte = built.reporte || { cabeza: null, cola: null };
+      reporteOrdenado = !!built.reporteOrdenado;
+      ultimoPasoVista = null;
       baldeActivo = 0;
       for (let i = 0; i < casilleros.length; i++) {
         if (casilleros[i]) {
@@ -378,9 +419,9 @@
         }
       }
 
+      BV.reiniciarCanvasAnimacion(ui);
       refrescarEstatico();
-      BV.pintarListaPorIds(ui.listaEl, []);
-      BancoMergeViz.dibujarArbolMerge(ui.canvasMerge, null);
+      requestAnimationFrame(() => redibujarVistaEstatica(true));
 
       if (!sinMensaje) {
         el("msg").textContent =
@@ -400,12 +441,7 @@
 
     el("btnDemo").addEventListener("click", async () => {
       initTabla(parseInt(el("tamHash").value, 10));
-      const datos = [
-        [1003, "Ana Lopez", "Ahorro", 1500.5],
-        [1001, "Carlos Ruiz", "Corriente", 3200],
-        [1002, "Maria Gomez", "Ahorro", 780.25],
-        [1204, "Pedro Diaz", "Corriente", 9100],
-      ];
+      const datos = BE.obtener("demo").clientes;
       for (const [cuenta, nombre, tipo, saldo] of datos) {
         el("cuenta").value = cuenta;
         const r = BA.animarInsertar(casilleros, tamano, { cuenta, nombre, tipo, saldo });

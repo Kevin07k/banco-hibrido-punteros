@@ -20,8 +20,8 @@
   <main class="contenedor">
     <h1>Árbol rojo-negro — simulador</h1>
     <p class="subtitulo">
-      Recorrido paso a paso alineado con <code>ArbolRojoNegro.java</code> (sin tabla hash).
-      Para ver cada caso con diagramas antes/después abre la
+      Inserta valores y observa cómo se balancea el árbol (<code>ArbolRojoNegro.java</code>, sin tabla hash).
+      Cada paso muestra la decisión; rotaciones y tío rojo se ven en el canvas. Explicaciones por caso en la
       <a href="rbt-casos.html">guía de casos R-N</a>.
     </p>
 
@@ -39,10 +39,13 @@
       <div class="leyenda">
         <span class="l-rojo">Rojo</span>
         <span class="l-negro">Negro</span>
-        <span>Caja ámbar = puntero <strong>actual</strong></span>
-        <span>Verde = siguiente hijo en la comparación</span>
+        <span>Ámbar = N / actual / V (doble negro)</span>
+        <span>Verde = hijo en BST</span>
         <span>Cian = clave buscada / insertada</span>
         <span>Lila = pivote de rotación</span>
+        <span>Rosa = T tío</span>
+        <span>Naranja = H hermano</span>
+        <span>Gris = P padre · A abuelo</span>
       </div>
     </div>
 
@@ -63,38 +66,33 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="js/nucleo.js"></script>
   <script src="js/canvas-hd.js"></script>
   <script src="js/serializacion.js"></script>
   <script src="js/motor-animacion.js"></script>
+  <script src="js/arbol-transicion.js"></script>
+  <script src="js/sistema-visual-unificado.js"></script>
   <script src="js/vista.js"></script>
   <script src="js/reproductor.js"></script>
   <script>
-    const BD = window.BancoDoc;
     const BA = window.BancoAnim;
     const BV = window.BancoVista;
     const canvas = document.getElementById("canvasRbt");
     const inputSecuencia = document.getElementById("secuencia");
-    const ui = { canvas, hashEl: null, listaEl: null };
+    const ui = { canvas, modo: "arbol", hashEl: null, listaEl: null };
+
+    BancoVisualUnificado.init(canvas, { modo: "arbol", alturaLogica: 480 });
 
     let ultimoPaso = null;
 
     const reproductor = new ReproductorVisual({
       contenedor: document.getElementById("reproductor"),
-      alPaso: (paso) => {
+      alPaso: (paso, _i, opts) => {
         ultimoPaso = paso;
-        return BV.aplicarPaso(paso, ui, { instantaneo: true });
+        return BV.aplicarPaso(paso, ui, opts);
       },
     });
-
-    BancoCanvas.observar(
-      canvas,
-      () => {
-        if (ultimoPaso) BV.aplicarPaso(ultimoPaso, ui, { instantaneo: true });
-        else BD.dibujarArbol(canvas, null, { instantaneo: true });
-      },
-      480
-    );
 
     function parseSecuencia(txt) {
       return txt.split(/[,;\s]+/).map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
@@ -119,7 +117,7 @@
     document.getElementById("btnLimpiar").onclick = () => {
       ultimoPaso = null;
       reproductor.cargarPasos([]);
-      BD.dibujarArbol(canvas, null, { instantaneo: true });
+      BV.reiniciarCanvasAnimacion(ui);
     };
 
     const params = new URLSearchParams(location.search);
@@ -128,7 +126,7 @@
       inputSecuencia.value = seq;
       animar(seq);
     } else {
-      BD.dibujarArbol(canvas, null, { instantaneo: true });
+      BV.reiniciarCanvasAnimacion(ui);
     }
   </script>
 </body>

@@ -217,6 +217,16 @@ function obtenerRaiz(nodo) {
   }
 }
 
+  /** Igual que ReporteLista.encadenarAlFinal — append O(1) por inserción. */
+  function encadenarAlFinal(cabeza, cola, nodo) {
+    nodo.siguiente = null;
+    if (!cabeza) {
+      return { cabeza: nodo, cola: nodo };
+    }
+    cola.siguiente = nodo;
+    return { cabeza, cola: nodo };
+  }
+
   function mergeSortLista(cabeza, onPaso) {
   const log = (m, t = "") => onPaso?.(m, t);
   if (!cabeza || !cabeza.siguiente) {
@@ -680,6 +690,7 @@ function fusionarListas(a, b, log) {
     obtenerRaiz,
     contar,
     limpiarSiguiente,
+    encadenarAlFinal,
     encadenarInorden,
     Encadenador,
     mergeSortLista,

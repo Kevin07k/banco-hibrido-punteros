@@ -40,6 +40,7 @@
           <span class="reproductor-paso-num" data-ref="pasoNum">—</span>
           <strong data-ref="titulo">Ejecuta una operación para ver la animación</strong>
           <p data-ref="detalle"></p>
+          <p class="reproductor-guia" data-ref="guia"></p>
         </div>
         <div class="reproductor-timeline-wrap">
           <input type="range" class="reproductor-timeline" data-accion="timeline" min="0" max="0" value="0" />
@@ -80,7 +81,7 @@
       }
     }
 
-    cargarPasos(pasos) {
+    cargarPasos(pasos, opts) {
       this.pausar();
       this.pasos = pasos || [];
       this.indice = 0;
@@ -89,7 +90,7 @@
       tl.max = max;
       tl.value = 0;
       this._actualizarContador();
-      if (this.pasos.length) return this.irA(0);
+      if (this.pasos.length) return this.irA(0, opts);
       this._mostrarMensajeVacio();
       return Promise.resolve();
     }
@@ -97,6 +98,7 @@
     _mostrarMensajeVacio() {
       this.ref.titulo.textContent = "Sin pasos — ejecuta una operación";
       this.ref.detalle.textContent = "";
+      if (this.ref.guia) this.ref.guia.textContent = "";
       this.ref.pasoNum.textContent = "—";
       this.ref.decision.className = "reproductor-decision";
     }
@@ -126,7 +128,16 @@
     _mostrarPaso(paso) {
       this.ref.pasoNum.textContent = `Paso ${this.indice + 1}`;
       this.ref.titulo.textContent = paso.titulo || paso.decision || "";
-      this.ref.detalle.textContent = paso.detalle || "";
+      let det = paso.detalle || "";
+      if (paso.decision && paso.titulo && det && !det.includes(paso.decision)) {
+        det = paso.decision + " — " + det;
+      } else if (!det && paso.decision) {
+        det = paso.decision;
+      }
+      this.ref.detalle.textContent = det;
+      if (this.ref.guia) {
+        this.ref.guia.textContent = paso.guia || "";
+      }
       const panel = this.ref.decision;
       panel.className = "reproductor-decision tipo-" + (paso.tipo || "default");
       let badge = panel.querySelector(".badge-decision");

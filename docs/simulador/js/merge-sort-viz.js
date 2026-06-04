@@ -5,11 +5,31 @@
 (function (global) {
   "use strict";
 
-  const GAP_H = 32;
+  const GAP_H = 34;
+  const GAP_CELDA = 5;
   const ROW_V = 92;
   const PAD_TOP = 28;
   const PAD_SIDE = 32;
-  const MAX_CELDAS_VISIBLES = 7;
+  /** Celdas individuales; solo pill en listas enormes (el encaje del canvas escala el resto). */
+  const MAX_CELDAS_PILL = 28;
+
+  function especCeldasMerge(nVals) {
+    const pad = 16;
+    const gap = GAP_CELDA;
+    const minCw = 40;
+    const maxCw = 48;
+    if (!nVals) return { pill: false, cw: 42, gap: 0, width: 54 };
+    if (nVals > MAX_CELDAS_PILL) {
+      const txt = `${nVals} nodos`;
+      return { pill: true, cw: 0, gap: 0, width: Math.min(160, 20 + txt.length * 6) };
+    }
+    const gaps = Math.max(0, nVals - 1) * gap;
+    const budget = Math.min(720, Math.max(200, 44 * nVals + gaps));
+    const inner = budget - pad;
+    const cw = Math.min(maxCw, Math.max(minCw, (inner - gaps) / nVals));
+    const width = pad + nVals * cw + gaps;
+    return { pill: false, cw, gap, width: Math.max(52, width) };
+  }
 
   function clonarArbol(n) {
     if (!n) return null;
@@ -56,21 +76,8 @@
     return 1 + Math.max(profundidadMax(n.izq), profundidadMax(n.der));
   }
 
-  function cellSize(nVals) {
-    if (nVals > MAX_CELDAS_VISIBLES) return 0;
-    if (nVals > 5) return 40;
-    if (nVals > 3) return 46;
-    return 50;
-  }
-
   function anchoNodo(n) {
-    const nV = n.valores.length;
-    if (nV > MAX_CELDAS_VISIBLES) {
-      const txt = `${n.valores[0]} … ${n.valores[nV - 1]}  (${nV})`;
-      return Math.min(140, 14 + txt.length * 6.5);
-    }
-    const cw = cellSize(nV);
-    return Math.max(56, nV * cw + 14);
+    return especCeldasMerge(n.valores.length).width;
   }
 
   const BOX_TOP_OFF = 2;
@@ -404,13 +411,15 @@
       ctx.fillText(est.t, x, y - 26);
     }
 
-    if (vals.length > MAX_CELDAS_VISIBLES) {
+    const spec = especCeldasMerge(vals.length);
+    if (spec.pill) {
       dibujarPillCompacta(ctx, nodo, s);
       return;
     }
 
-    const cw = cellSize(vals.length);
-    const totalW = vals.length * cw;
+    const cw = spec.cw;
+    const gap = spec.gap != null ? spec.gap : GAP_CELDA;
+    const totalW = vals.length * cw + Math.max(0, vals.length - 1) * gap;
     const x0 = x - totalW / 2;
     if (nodo.activo) {
       ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
@@ -423,26 +432,26 @@
     }
 
     vals.forEach((v, i) => {
-      const cx = x0 + i * cw;
+      const left = x0 + i * (cw + gap);
       const resaltado = nodo.resaltar && nodo.resaltar.includes(i);
       const activo = nodo.activo && resaltado;
 
       ctx.fillStyle = activo ? "#16a34a" : "#1e293b";
       ctx.strokeStyle = activo ? "#22c55e" : "#64748b";
       ctx.lineWidth = 2;
-      roundRect(ctx, cx + 3, y - BOX_TOP_OFF, cw - 6, BOX_H, 5);
+      roundRect(ctx, left + 2, y - BOX_TOP_OFF, cw - 4, BOX_H, 5);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = activo ? "#fff" : "#f1f5f9";
-      ctx.font = `bold ${Math.round(13 * s)}px system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(12 * s)}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(v), snap(cx + cw / 2), snap(y + 14));
+      ctx.fillText(String(v), snap(left + cw / 2), snap(y + 14));
 
       ctx.fillStyle = "#64748b";
       ctx.font = `${Math.round(9 * s)}px system-ui, sans-serif`;
-      ctx.fillText(String(i), snap(cx + cw / 2), snap(y + 30));
+      ctx.fillText(String(i), snap(left + cw / 2), snap(y + 30));
     });
   }
 
@@ -487,6 +496,7 @@
   }
 
   global.BancoMergeViz = {
+    especCeldasMerge,
     crearNodoMerge,
     instantaneaArbol,
     clonarArbol,

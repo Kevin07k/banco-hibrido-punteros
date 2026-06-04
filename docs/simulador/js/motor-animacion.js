@@ -19,6 +19,7 @@
         titulo: o.titulo || "",
         decision: o.decision || "",
         detalle: o.detalle || "",
+        guia: o.guia || "",
         tipo: o.tipo || "default",
         hashIdx: o.hashIdx ?? o.balde ?? -1,
         balde: o.balde ?? o.hashIdx ?? 0,
@@ -31,6 +32,10 @@
         punteroDir: o.punteroDir || null,
         punteroEsNulo: !!o.punteroEsNulo,
         busqueda: o.busqueda ?? null,
+        rolAbuelo: o.rolAbuelo ?? null,
+        rolPadre: o.rolPadre ?? null,
+        rolTio: o.rolTio ?? null,
+        rolHermano: o.rolHermano ?? null,
         listaPunteros: o.listaPunteros || null,
         casilleros: BS().serializarCasillerosSync(casilleros),
         listaIds: o.listaIds || null,
@@ -265,6 +270,8 @@
         titulo: "corregirInsercion()",
         decision: "Violación: padre rojo → revisar tío y abuelo",
         detalle: "Casos 3 (tío rojo), 4 (triángulo) o 5 (línea) según la configuración.",
+        guia:
+          "Se detectaron dos nodos rojos seguidos (hijo y padre). Ahora el algoritmo mira al tío del nuevo nodo: si el tío es rojo se recolorea; si es negro o no existe, puede hacer falta rotar.",
         tipo: "balanceo",
         balde,
         resaltar: [actual.getCuenta()],
@@ -284,24 +291,48 @@
             titulo: "Inserción — Caso 3: tío rojo",
             decision: "Recolorar padre, tío y abuelo",
             detalle: `P ${padre.getCuenta()} y T ${tio.getCuenta()} → NEGRO; abuelo A ${abuelo.getCuenta()} → ROJO. El problema sube a A.`,
+            guia:
+              "El tío también es rojo: no hace falta rotar todavía. Se «reparten» colores — padre y tío a negro, abuelo a rojo — y el posible conflicto sube un nivel hacia la raíz.",
             tipo: "recolorar",
             balde,
             resaltar: [padre.getCuenta(), tio.getCuenta(), abuelo.getCuenta()],
+            rolAbuelo: abuelo.getCuenta(),
+            rolPadre: padre.getCuenta(),
+            rolTio: tio.getCuenta(),
+            puntero: actual.getCuenta(),
+            punteroLabel: "N nuevo",
           });
           padre.esRojo = false;
           tio.esRojo = false;
           abuelo.esRojo = true;
           actual = abuelo;
-          reg.capturar(cas, { titulo: "Tras recolorar", decision: "Continuar desde el abuelo", tipo: "recolorar", balde, resaltar: [abuelo.getCuenta()] });
+          reg.capturar(cas, {
+            titulo: "Tras recolorar",
+            decision: "Continuar desde el abuelo A",
+            detalle: `El «doble rojo» subió: ahora se revisa A=${abuelo.getCuenta()} como si fuera un nuevo N.`,
+            tipo: "recolorar",
+            balde,
+            resaltar: [abuelo.getCuenta()],
+            rolAbuelo: abuelo.getCuenta(),
+            puntero: abuelo.getCuenta(),
+            punteroLabel: "actual",
+          });
         } else {
           if (actual === padre.derecho) {
             reg.capturar(cas, {
               titulo: "Inserción — Caso 4: triángulo (Zig-Zag)",
               decision: "Rotación izquierda en el padre P",
-              detalle: `N y P forman triángulo; rotarIzquierda(${padre.getCuenta()}) para alinear y pasar al Caso 5.`,
+              detalle: `N ${actual.getCuenta()} y P ${padre.getCuenta()} no están alineados con A ${abuelo.getCuenta()}; rotarIzquierda(P) alinea N–P–A en línea para el Caso 5.`,
+              guia:
+                "Rotación detectada: el tío es negro y los tres nodos forman triángulo. Esta rotación en el padre no termina el balanceo, pero deja a N y P en línea para la rotación final en el abuelo.",
               tipo: "balanceo",
               balde,
-              resaltar: [actual.getCuenta(), padre.getCuenta()],
+              resaltar: [actual.getCuenta(), padre.getCuenta(), abuelo.getCuenta()],
+              rolAbuelo: abuelo.getCuenta(),
+              rolPadre: padre.getCuenta(),
+              puntero: actual.getCuenta(),
+              punteroLabel: "N",
+              pivot: padre.getCuenta(),
             });
             actual = padre;
             rotarIzquierdaAnim(actual, reg, cas, balde);
@@ -313,9 +344,16 @@
               titulo: "Inserción — Caso 5: línea (Zig-Zig)",
               decision: "Rotación derecha en el abuelo A + recolorar",
               detalle: `P ${padre.getCuenta()} → NEGRO; A ${abuelo.getCuenta()} → ROJO; rotarDerecha(A). Balanceo local terminado.`,
+              guia:
+                "N, padre y abuelo ya están alineados (línea recta). Una rotación en el abuelo reordena el subárbol y los colores dejan de violar la regla «dos rojos seguidos» en este tramo.",
               tipo: "balanceo",
               balde,
               resaltar: [padre.getCuenta(), abuelo.getCuenta()],
+              rolAbuelo: abuelo.getCuenta(),
+              rolPadre: padre.getCuenta(),
+              pivot: abuelo.getCuenta(),
+              puntero: actual.getCuenta(),
+              punteroLabel: "N",
             });
             padre.esRojo = false;
             abuelo.esRojo = true;
@@ -329,9 +367,16 @@
             titulo: "Inserción — Caso 3 (espejo): tío rojo",
             decision: "Recolorar padre, tío y abuelo",
             detalle: "Misma lógica del Caso 3 en el subárbol derecho del abuelo.",
+            guia:
+              "Espejo del Caso 3: tío rojo → recolorar padre y tío a negro, abuelo a rojo, sin rotación.",
             tipo: "recolorar",
             balde,
             resaltar: [padre.getCuenta(), tio.getCuenta(), abuelo.getCuenta()],
+            rolAbuelo: abuelo.getCuenta(),
+            rolPadre: padre.getCuenta(),
+            rolTio: tio.getCuenta(),
+            puntero: actual.getCuenta(),
+            punteroLabel: "N nuevo",
           });
           padre.esRojo = false;
           tio.esRojo = false;
@@ -342,10 +387,15 @@
             reg.capturar(cas, {
               titulo: "Inserción — Caso 4 (espejo): triángulo (Zig-Zag)",
               decision: "Rotación derecha en el padre P",
-              detalle: `rotarDerecha(${padre.getCuenta()}) para alinear antes del Caso 5.`,
+              detalle: `Triángulo en subárbol derecho: rotarDerecha(${padre.getCuenta()}) alinea N, P y A antes del Caso 5.`,
               tipo: "balanceo",
               balde,
-              resaltar: [actual.getCuenta(), padre.getCuenta()],
+              resaltar: [actual.getCuenta(), padre.getCuenta(), abuelo.getCuenta()],
+              rolAbuelo: abuelo.getCuenta(),
+              rolPadre: padre.getCuenta(),
+              puntero: actual.getCuenta(),
+              punteroLabel: "N",
+              pivot: padre.getCuenta(),
             });
             actual = padre;
             rotarDerechaAnim(actual, reg, cas, balde);
@@ -356,10 +406,15 @@
             reg.capturar(cas, {
               titulo: "Inserción — Caso 5 (espejo): línea (Zig-Zig)",
               decision: "Rotación izquierda en el abuelo A + recolorar",
-              detalle: `P → NEGRO, A → ROJO; rotarIzquierda(A).`,
+              detalle: `P ${padre.getCuenta()} → NEGRO; A ${abuelo.getCuenta()} → ROJO; rotarIzquierda(A). Balanceo local terminado.`,
               tipo: "balanceo",
               balde,
               resaltar: [padre.getCuenta(), abuelo.getCuenta()],
+              rolAbuelo: abuelo.getCuenta(),
+              rolPadre: padre.getCuenta(),
+              pivot: abuelo.getCuenta(),
+              puntero: actual.getCuenta(),
+              punteroLabel: "N",
             });
             padre.esRojo = false;
             abuelo.esRojo = true;
@@ -470,11 +525,17 @@
           reg.capturar(cas, {
             titulo: "Eliminación — Caso 2: hermano rojo",
             decision: "Rotar padre hacia V + recolorear",
-            detalle: `H ${hermano.getCuenta()} → NEGRO, padre → ROJO; rotarIzquierda(padre). El doble negro sigue; cae en casos 3–6.`,
+            detalle: `V (doble negro) está a la izquierda de P ${padre.getCuenta()}; el hermano H ${hermano.getCuenta()} es ROJO → H pasa a NEGRO, P a ROJO y rotarIzquierda(P). El déficit continúa; ahora aplica casos 3–6.`,
+            guia:
+              "Tras borrar un negro queda un «hueco negro extra». Si el hermano de ese hueco es rojo, primero se rota el padre y se recolorea para convertir al hermano en negro y poder usar los casos de sobrinos.",
             tipo: "balanceo",
             balde,
             resaltar: [padre.getCuenta(), hermano.getCuenta()],
             pivot: padre.getCuenta(),
+            rolPadre: padre.getCuenta(),
+            rolHermano: hermano.getCuenta(),
+            puntero: actual ? actual.getCuenta() : null,
+            punteroLabel: "V",
           });
           hermano.esRojo = false;
           padre.esRojo = true;
@@ -491,19 +552,31 @@
             reg.capturar(cas, {
               titulo: "Eliminación — Caso 4: sobrinos negros, padre rojo",
               decision: "H → rojo; padre absorbe el doble negro",
-              detalle: `H ${hermano.getCuenta()} rojo; el padre ${padre.getCuenta()} pasa a negro al cerrar. Termina el arreglo.`,
+              detalle: `Sobrinos de H ${hermano.getCuenta()} son negros/nulos y P ${padre.getCuenta()} es ROJO: pintar H rojo y P negro disuelve el doble negro en V. Fin del balanceo.`,
+              guia:
+                "Misma situación que el Caso 3, pero el padre es rojo: al pintar el hermano de rojo y el padre de negro, el «hueco» desaparece sin seguir subiendo.",
               tipo: "recolorar",
               balde,
               resaltar: [hermano.getCuenta(), padre.getCuenta()],
+              rolPadre: padre.getCuenta(),
+              rolHermano: hermano.getCuenta(),
+              puntero: actual ? actual.getCuenta() : null,
+              punteroLabel: "V",
             });
           } else {
             reg.capturar(cas, {
               titulo: "Eliminación — Caso 3: sobrinos negros, padre negro",
               decision: "H → rojo; subir doble negro al padre",
-              detalle: `Ambos sobrinos de H ${hermano.getCuenta()} negros; el déficit sube al padre ${padre.getCuenta()}.`,
+              detalle: `H ${hermano.getCuenta()} y sus dos sobrinos negros/nulos; P ${padre.getCuenta()} negro → H pasa a ROJO y el «hueco negro extra» sube a P (recursión en corregirEliminacion).`,
+              guia:
+                "El hermano y sus dos hijos (sobrinos) son negros: no se puede rotar aquí. Se pinta el hermano de rojo y el déficit sube al padre, como si el padre perdiera un negro extra.",
               tipo: "recolorar",
               balde,
               resaltar: [hermano.getCuenta(), padre.getCuenta()],
+              rolPadre: padre.getCuenta(),
+              rolHermano: hermano.getCuenta(),
+              puntero: actual ? actual.getCuenta() : null,
+              punteroLabel: "V",
             });
           }
           hermano.esRojo = true;
@@ -513,10 +586,15 @@
             reg.capturar(cas, {
               titulo: "Eliminación — Caso 5: triángulo (sobrino cercano rojo)",
               decision: "Rotar hermano H + recolorear",
-              detalle: "Sobrino lejano negro, cercano rojo → rotarDerecha(H) y caer en Caso 6.",
+              detalle: `Sobrino cercano de H ${hermano.getCuenta()} es ROJO y el lejano negro → rotarDerecha(H), recolorear y alinear para el Caso 6 (sobrino lejano rojo).`,
               tipo: "balanceo",
               balde,
               resaltar: [hermano.getCuenta()],
+              rolHermano: hermano.getCuenta(),
+              rolPadre: padre.getCuenta(),
+              pivot: hermano.getCuenta(),
+              puntero: actual ? actual.getCuenta() : null,
+              punteroLabel: "V",
             });
             if (hermano.izquierdo) hermano.izquierdo.esRojo = false;
             hermano.esRojo = true;
@@ -526,11 +604,17 @@
           reg.capturar(cas, {
             titulo: "Eliminación — Caso 6: sobrino lejano rojo",
             decision: "Rotar padre hacia V + colores finales",
-            detalle: `H hereda color del padre; padre y sobrino lejano → NEGRO; rotarIzquierda(padre). Doble negro disuelto.`,
+            detalle: `Sobrino lejano de H ${hermano.getCuenta()} es ROJO: H toma el color de P ${padre.getCuenta()}, P y sobrino lejano → NEGRO; rotarIzquierda(P). El doble negro en V desaparece.`,
+            guia:
+              "Con el sobrino lejano rojo ya se puede rotar el padre hacia el hueco y fijar colores. El árbol vuelve a cumplir la altura negra y el doble negro desaparece.",
             tipo: "balanceo",
             balde,
             resaltar: [padre.getCuenta(), hermano.getCuenta()],
             pivot: padre.getCuenta(),
+            rolPadre: padre.getCuenta(),
+            rolHermano: hermano.getCuenta(),
+            puntero: actual ? actual.getCuenta() : null,
+            punteroLabel: "V",
           });
           hermano.esRojo = padre.esRojo;
           padre.esRojo = false;
@@ -774,11 +858,15 @@
     return { pasos: reg.pasos, casilleros: BS().sincronizarRaices(cas) };
   }
 
-  function animarInsertar(casillerosOrig, tamano, cliente) {
+  function animarInsertar(casillerosOrig, tamano, cliente, estadoReporte) {
     const cas = BS().clonarCasilleros(casillerosOrig);
     const reg = new RegistroPasos(tamano);
     const cuenta = cliente.cuenta;
     const idx = BD().calcularIndice(cuenta, tamano);
+    const listaIdsPrev =
+      estadoReporte && estadoReporte.listaIds && estadoReporte.listaIds.length
+        ? estadoReporte.listaIds.slice()
+        : [];
 
     reg.capturar(cas, {
       titulo: "Inicio: BancoEstructura.insertar",
@@ -869,21 +957,48 @@
       }
     ));
 
-    const { Cliente, NodoHibrido } = BD();
+    const { Cliente, NodoHibrido, encadenarAlFinal } = BD();
     const nuevo = new NodoHibrido(new Cliente(cliente.cuenta, cliente.nombre, cliente.tipo, cliente.saldo));
     cas[idx] = insertarRBTAnim(raiz, nuevo, reg, cas, idx);
 
+    const listaIds = listaIdsPrev.concat(cuenta);
+    const cabezaRep = BS().listaDesdeIds(cas, listaIds);
+    let colaRep = cabezaRep;
+    while (colaRep && colaRep.siguiente) colaRep = colaRep.siguiente;
+
+    reg.capturar(cas, {
+      titulo: "ReporteLista.encadenarAlFinal",
+      decision: "Append O(1) al final de la lista reporte",
+      detalle: listaIds.length
+        ? `Orden de inserción: ${listaIds.join(" → ")}`
+        : `Primera cuenta en la lista: ${cuenta}`,
+      tipo: "lista",
+      hashIdx: idx,
+      balde: idx,
+      listaIds,
+      resaltar: [cuenta],
+      estructura: "lista",
+    });
+
     reg.capturar(cas, {
       titulo: "TablaHash.setRaizPorCuenta",
-      decision: `Actualizar casilleros[${idx}]`,
-      detalle: "invalidarReporte() limpia punteros siguiente si había reporte.",
+      decision: `Actualizar casilleros[${idx}] · reporteGenerado = true`,
+      detalle: "Si el reporte estaba ordenado (merge), pasa a lista «sucia» hasta el próximo generarReporteOrdenado.",
       tipo: "fin",
       hashIdx: idx,
       balde: idx,
+      listaIds,
       funcion: "BancoEstructura.insertar",
     });
 
-    return { pasos: reg.pasos, ok: true, casilleros: BS().sincronizarRaices(cas) };
+    return {
+      pasos: reg.pasos,
+      ok: true,
+      casilleros: BS().sincronizarRaices(cas),
+      listaIds,
+      reporte: { cabeza: cabezaRep, cola: colaRep },
+      reporteOrdenado: false,
+    };
   }
 
   function animarBuscar(casillerosOrig, tamano, cuenta) {
@@ -1050,21 +1165,12 @@
     return { pasos: reg.pasos, listaIds: ult?.listaIds || idsIni, casilleros: cas };
   }
 
-  function animarReporte(casillerosOrig, tamano) {
-    const cas = BS().clonarCasilleros(casillerosOrig);
-    const reg = new RegistroPasos(tamano);
-
-    reg.capturar(cas, {
-      titulo: "generarReporteOrdenado",
-      decision: "ReporteLista.generarOrdenado",
-      detalle: "Fase 1: encadenar con inorden. Fase 2: MergeSort por siguiente.",
-      tipo: "inicio",
-    });
-
+  function armarListaInordenAnim(cas, reg) {
     cas.forEach((r) => BD().limpiarSiguiente(r));
     reg.capturar(cas, {
       titulo: "limpiarEnlaces",
       decision: "siguiente = null en todo el bosque",
+      detalle: "Solo si no hay lista reporte previa (armarDesdeBosque).",
       tipo: "default",
     });
 
@@ -1097,11 +1203,74 @@
         });
       });
     }
+    return cabeza;
+  }
 
-    const idsIni = BS().serializarLista(cabeza);
+  function animarReporte(casillerosOrig, tamano, estadoReporte) {
+    const cas = BS().clonarCasilleros(casillerosOrig);
+    const reg = new RegistroPasos(tamano);
+    const est = estadoReporte || {};
+    const listaPrev =
+      est.listaIds && est.listaIds.length ? est.listaIds.map(Number) : [];
+    const yaOrdenado = !!est.reporteOrdenado;
+
     reg.capturar(cas, {
-      titulo: "Antes de ordenar",
-      decision: "Lista global (puede no estar ordenada)",
+      titulo: "generarReporteOrdenado",
+      decision: listaPrev.length
+        ? yaOrdenado
+          ? "return cabezaReporte (O(1))"
+          : "ReporteLista.mergeSortLista"
+        : "ReporteLista.armarDesdeBosque + mergeSortLista",
+      detalle: listaPrev.length
+        ? yaOrdenado
+          ? "La lista ya está ordenada; no se recorren baldes ni se fusiona de nuevo."
+          : `Lista global ya armada al insertar (${listaPrev.length} nodos, orden de inserción) → solo MergeSort por siguiente.`
+        : "Sin lista previa: inorden por balde y luego MergeSort.",
+      tipo: "inicio",
+    });
+
+    let cabeza;
+    let idsIni;
+
+    if (listaPrev.length) {
+      cabeza = BS().listaDesdeIds(cas, listaPrev);
+      idsIni = listaPrev.slice();
+      reg.capturar(cas, {
+        titulo: "Lista reporte (encadenarAlFinal)",
+        decision: "Omitir inorden por balde",
+        detalle:
+          "Cada insertar ya hizo ReporteLista.encadenarAlFinal. Secuencia actual: " +
+          (idsIni.join(" → ") || "(vacía)"),
+        tipo: "default",
+        listaIds: idsIni,
+      });
+
+      if (yaOrdenado) {
+        let colaFin = cabeza;
+        while (colaFin && colaFin.siguiente) colaFin = colaFin.siguiente;
+        reg.capturar(cas, {
+          titulo: "Reporte ya ordenado",
+          decision: "return cabezaReporte",
+          detalle: "Igual que BancoEstructura cuando reporteOrdenado == true.",
+          tipo: "fin",
+          listaIds: idsIni,
+        });
+        return {
+          pasos: reg.pasos,
+          listaIds: idsIni,
+          casilleros: cas,
+          reporte: { cabeza, cola: colaFin },
+          reporteOrdenado: true,
+        };
+      }
+    } else {
+      cabeza = armarListaInordenAnim(cas, reg);
+      idsIni = BS().serializarLista(cabeza);
+    }
+
+    reg.capturar(cas, {
+      titulo: "Antes de MergeSort",
+      decision: "Lista global por puntero siguiente",
       detalle: idsIni.join(" → ") || "(vacía)",
       tipo: "default",
       listaIds: idsIni,
@@ -1115,7 +1284,16 @@
     arbolMerge.estado = "raiz";
     mergeSortAnim(cabeza, reg, cas, arbolMerge, idGen, arbolMerge);
     const idsFin = reg.pasos[reg.pasos.length - 1].listaIds;
-    return { pasos: reg.pasos, listaIds: idsFin, casilleros: cas };
+    const cabezaFin = idsFin && idsFin.length ? BS().listaDesdeIds(cas, idsFin) : null;
+    let colaFin = cabezaFin;
+    while (colaFin && colaFin.siguiente) colaFin = colaFin.siguiente;
+    return {
+      pasos: reg.pasos,
+      listaIds: idsFin,
+      casilleros: cas,
+      reporte: { cabeza: cabezaFin, cola: colaFin },
+      reporteOrdenado: true,
+    };
   }
 
   function encadenarInordenAnim(nodo, cas, balde, reg, onNodo) {
