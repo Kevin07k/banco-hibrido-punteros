@@ -57,7 +57,7 @@ Los punteros del árbol (`izquierdo`, `derecho`, `padre`) **no se tocan** en el 
 
 La fachada es `BancoEstructura`; la lógica interna vive en `TablaHash`, `ArbolRojoNegro` y `ReporteLista`.
 
-Diagrama de clases y simulador paso a paso: [`docs/diagrama-clases.md`](docs/diagrama-clases.md) y [`docs/simulador/`](docs/simulador/).
+Diagrama de clases: [`docs/diagrama-clases.md`](docs/diagrama-clases.md). Simulador web (hash, RBT, reporte alineado con `ReporteLista`): [`docs/simulador/`](docs/simulador/) — ver [`docs/README.md`](docs/README.md).
 
 ---
 
@@ -66,7 +66,7 @@ Diagrama de clases y simulador paso a paso: [`docs/diagrama-clases.md`](docs/dia
 | Capa | Responsables | Qué hace |
 |------|--------------|----------|
 | **Captura y menú** | Fernando, Leandro | Menú consola, `Scanner` seguro, validaciones (saldo, cuenta única, baja con saldo 0). |
-| **Motor de datos** | Kevin | `TablaHash`, `ArbolRojoNegro`, inserción/búsqueda/baja, reporte por inorden + merge de listas. |
+| **Motor de datos** | Kevin | `TablaHash`, `ArbolRojoNegro`, lista reporte con `encadenarAlFinal`; merge bajo demanda en `generarReporteOrdenado`. |
 | **Presentación del reporte** | Luna | Tabla alineada en consola recorriendo la lista unificada (`siguiente`). |
 
 **Idea central:** flujo por punteros en tres niveles — captura → almacenamiento indexado (hash + RBT) → extracción y fusión sin arreglos auxiliares para el reporte global.
@@ -89,9 +89,10 @@ src/
       ArbolRojoNegro.java
       ReporteLista.java
 docs/
+  README.md                          # Índice de documentación + guía del simulador
   diagrama-clases.md                 # Diagrama Mermaid (GitHub / IDE)
   diseno-optimizado-estructura.md    # Lista doble + cola + bandera de orden
-  simulador/                         # Web interactiva (HTML/JS)
+  simulador/                         # Web: interactivo, casos RBT, mapa de funciones
 ```
 
 ---
@@ -125,21 +126,23 @@ La demo inserta clientes de prueba, imprime el reporte ordenado por cuenta, elim
 
 ## Documentación
 
-Todo está en [`docs/`](docs/):
+Todo está en [`docs/`](docs/). **Índice detallado:** [`docs/README.md`](docs/README.md).
 
-- **[`docs/diagrama-clases.md`](docs/diagrama-clases.md)** — diagrama de clases (Mermaid).
-- **[`docs/simulador/`](docs/simulador/)** — simulador paso a paso (hash, RBT, reporte).
+| Recurso | Contenido |
+|---------|-----------|
+| [`docs/diagrama-clases.md`](docs/diagrama-clases.md) | Diagrama Mermaid y capas del equipo |
+| [`docs/diseno-optimizado-estructura.md`](docs/diseno-optimizado-estructura.md) | Reporte con cola, doble enlace y merge lazy |
+| [`docs/simulador/`](docs/simulador/) | Simulador HTML/JS alineado con `src/datos/` |
+| [`AGENT.md`](AGENT.md) | Restricciones del curso y casos teóricos RBT (5 + 6) |
 
-**Simulador web:**
+**Simulador web** (recomendado para practicar el reporte y los casos RBT):
 
 ```bash
 cd docs/simulador
 python3 -m http.server 8080
 ```
 
-→ `http://localhost:8080`
-
-Índice completo: [`docs/README.md`](docs/README.md).
+→ **http://localhost:8080** — portada en `index.html`; simulador principal en **`interactivo.html`** (escenarios con colisiones fuertes, reporte sin repetir inorden si la lista ya se armó al insertar).
 
 ---
 
