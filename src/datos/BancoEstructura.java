@@ -94,6 +94,24 @@ public class BancoEstructura {
     }
 
     /**
+     * Actualiza nombre y saldo del cliente identificado por numero de cuenta.
+     * La clave de busqueda no cambia; no reordena arbol ni lista reporte.
+     *
+     * @return {@code false} si la cuenta no existe.
+     */
+    public boolean actualizar(long cuenta, String nombre, double saldo) {
+        NodoHibrido nodo = buscarNodo(cuenta);
+        if (nodo == null) {
+            return false;
+        }
+
+        Cliente cliente = nodo.getDatos();
+        cliente.setNombre(nombre);
+        cliente.setSaldo(saldo);
+        return true;
+    }
+
+    /**
      * Elimina un cliente del balde correspondiente y lo desengancha del reporte si aplica.
      */
     public boolean eliminar(long cuenta) {

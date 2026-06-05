@@ -2,22 +2,16 @@ package presentacion;
 
 import datos.BancoEstructura;
 import datos.Cliente;
-import datos.NodoHibrido;
+import negocio.GestorNegocio;
+import negocio.GestorNegocio.Resultado;
 
 /**
- * Capa de Presentación — Menú Principal (Luna).
+ * Capa de presentacion — menu principal.
  *
- * Orquesta la consola interactiva del sistema bancario híbrido.
- * Integra las tres capas según el plan de arquitectura:
- *
- *   - Nivel de Almacenamiento (Kevin)   → BancoEstructura
- *   - Nivel de Lógica de Negocio (Leandro) → validaciones embebidas aquí
- *     hasta que Leandro entregue su capa; marcadas con // [LEANDRO]
- *   - Nivel de Presentación (Luna)      → esta clase + ReporteImpresora
- *
- * Restricciones del docente cumplidas:
- *   - Sin arrays auxiliares para el reporte (O(N) por puntero siguiente).
- *   - Todas las entradas de teclado blindadas con try-catch.
+ * Flujo de tres capas:
+ *   Presentacion (esta clase + ReporteImpresora)
+ *       → Negocio (GestorNegocio)
+ *       → Datos (BancoEstructura)
  */
 public class MenuPrincipal {
 
@@ -26,15 +20,16 @@ public class MenuPrincipal {
     private static final int OPC_BUSCAR    = 2;
     private static final int OPC_REPORTE   = 3;
     private static final int OPC_BAJA      = 4;
-    private static final int OPC_SALIR     = 5;
+    private static final int OPC_EDITAR    = 5;
+    private static final int OPC_SALIR     = 6;
 
     // ── Dependencias ──────────────────────────────────────────────────────
-    private final BancoEstructura  banco;
+    private final GestorNegocio    gestor;
     private final ReporteImpresora impresora;
 
     // ── Constructor ───────────────────────────────────────────────────────
     public MenuPrincipal() {
-        this.banco     = new BancoEstructura();
+        this.gestor    = new GestorNegocio(new BancoEstructura());
         this.impresora = new ReporteImpresora();
     }
 
@@ -56,8 +51,9 @@ public class MenuPrincipal {
                 case OPC_BUSCAR    -> modoBuscar();
                 case OPC_REPORTE   -> modoReporte();
                 case OPC_BAJA      -> modoBaja();
+                case OPC_EDITAR    -> modoEditar();
                 case OPC_SALIR     -> mostrarDespedida();
-                default            -> mostrarError("Opción inválida. Ingrese un número del 1 al 5.");
+                default            -> mostrarError("Opción inválida. Ingrese un número del 1 al 6.");
             }
 
         } while (opcion != OPC_SALIR);
@@ -74,20 +70,12 @@ public class MenuPrincipal {
         String tipo   = elegirTipo();
         double saldo  = leerDouble("  Saldo inicial   : ");
 
-        // ── [LEANDRO] Validación: saldo no negativo ───────────────────
-        if (saldo < 0) {
-            mostrarError("El saldo inicial no puede ser negativo.");
-            return;
+        switch (gestor.registrarCliente(cuenta, nombre, tipo, saldo)) {
+            case OK               -> mostrarExito("Cliente registrado correctamente.");
+            case SALDO_NEGATIVO   -> mostrarError("El saldo inicial no puede ser negativo.");
+            case CUENTA_DUPLICADA -> mostrarError("La cuenta N° " + cuenta + " ya existe en el sistema.");
+            default               -> mostrarError("No se pudo registrar el cliente.");
         }
-
-        // ── [LEANDRO] Validación: unicidad de cuenta ──────────────────
-        if (banco.existeCuenta(cuenta)) {
-            mostrarError("La cuenta N° " + cuenta + " ya existe en el sistema.");
-            return;
-        }
-
-        banco.insertar(new Cliente(cuenta, nombre, tipo, saldo));
-        mostrarExito("Cliente registrado correctamente.");
     }
 
     /** Opción 2 — Buscar cliente */
@@ -95,7 +83,7 @@ public class MenuPrincipal {
         mostrarSubtitulo("BUSCAR CLIENTE");
 
         long cuenta = leerLong("  N° de cuenta a buscar: ");
-        Cliente encontrado = banco.buscar(cuenta);
+        Cliente encontrado = gestor.buscarCliente(cuenta);
 
         if (encontrado == null) {
             mostrarError("No existe ningún cliente con la cuenta N° " + cuenta + ".");
@@ -109,16 +97,39 @@ public class MenuPrincipal {
     private void modoReporte() {
         mostrarSubtitulo("REPORTE GENERAL — ORDEN CRECIENTE POR CUENTA");
 
-        if (banco.contarClientes() == 0) {
+        if (gestor.contarClientes() == 0) {
             mostrarError("No hay clientes registrados para generar el reporte.");
             return;
         }
 
-        // Kevin genera la lista fusionada y ordenada por punteros
-        NodoHibrido cabeza = banco.generarReporteOrdenado();
+        impresora.imprimirReporte(gestor.generarReporteOrdenado());
+    }
 
-        // Luna recibe la cabeza y pinta la tabla en O(N)
-        impresora.imprimirReporte(cabeza);
+    /** Opción 5 — Editar cliente (nombre y saldo por N° de cuenta) */
+    private void modoEditar() {
+        mostrarSubtitulo("EDITAR CLIENTE");
+
+        long cuenta = leerLong("  N° de cuenta a editar: ");
+        Cliente cliente = gestor.buscarCliente(cuenta);
+
+        if (cliente == null) {
+            mostrarError("No existe ningún cliente con la cuenta N° " + cuenta + ".");
+            return;
+        }
+
+        System.out.println("  Datos actuales:");
+        impresora.imprimirFichaCliente(cliente);
+
+        String nombre = leerTexto("  Nuevo nombre completo : ");
+        double saldo  = leerDouble("  Nuevo saldo           : ");
+
+        switch (gestor.editarCliente(cuenta, nombre, saldo)) {
+            case OK -> mostrarExito("Cliente N° " + cuenta + " actualizado correctamente.");
+            case SALDO_NEGATIVO -> mostrarError("El saldo no puede ser negativo.");
+            case NOMBRE_VACIO -> mostrarError("El nombre no puede estar vacío.");
+            case ERROR_ACTUALIZACION -> mostrarError("No se pudo actualizar el cliente.");
+            default -> mostrarError("Operación no permitida.");
+        }
     }
 
     /** Opción 4 — Baja de cliente */
@@ -126,23 +137,21 @@ public class MenuPrincipal {
         mostrarSubtitulo("BAJA DE CLIENTE");
 
         long cuenta = leerLong("  N° de cuenta a eliminar: ");
-        Cliente cliente = banco.buscar(cuenta);
+        Cliente cliente = gestor.buscarCliente(cuenta);
 
         if (cliente == null) {
             mostrarError("No existe ningún cliente con la cuenta N° " + cuenta + ".");
             return;
         }
 
-        // ── [LEANDRO] Validación: saldo debe ser exactamente 0 ────────
-        if (cliente.getSaldo() != 0.0) {
-            mostrarError(String.format(
+        switch (gestor.darDeBajaCliente(cuenta)) {
+            case OK -> mostrarExito("Cuenta N° " + cuenta + " eliminada correctamente.");
+            case SALDO_NO_CERO -> mostrarError(String.format(
                 "No se puede eliminar la cuenta. El saldo debe ser 0.00 Bs. " +
                 "(Saldo actual: %.2f Bs.)", cliente.getSaldo()));
-            return;
+            case ERROR_ELIMINACION -> mostrarError("No se pudo eliminar la cuenta.");
+            default -> mostrarError("Operación no permitida.");
         }
-
-        banco.eliminar(cuenta);
-        mostrarExito("Cuenta N° " + cuenta + " eliminada correctamente.");
     }
 
     // ── Lectura segura de teclado (try-catch) ─────────────────────────────
@@ -236,7 +245,8 @@ public class MenuPrincipal {
         System.out.println("  │  2. Buscar cliente                 │");
         System.out.println("  │  3. Reporte general                │");
         System.out.println("  │  4. Baja de cliente                │");
-        System.out.println("  │  5. Salir                          │");
+        System.out.println("  │  5. Editar cliente                 │");
+        System.out.println("  │  6. Salir                          │");
         System.out.println("  └────────────────────────────────────┘");
     }
 
