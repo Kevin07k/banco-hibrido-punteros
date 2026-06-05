@@ -2,12 +2,20 @@ import datos.BancoEstructura;
 import datos.Cliente;
 import datos.NodoHibrido;
 import negocio.GestorNegocio;
+import presentacion.MenuPrincipal2;
 
 /**
  * Punto de entrada temporal para validar la capa de datos (Kevin).
  * Fernando integrara {@code presentacion.MenuPrincipal} como entry point final.
  */
 void main() {
+
+    MenuPrincipal2 menu =
+            new MenuPrincipal2();
+
+    menu.iniciar();
+
+
     BancoEstructura banco = new BancoEstructura();
     GestorNegocio gestor = new GestorNegocio(banco);
     banco.insertar(new Cliente(1003, "Ana Lopez", "Ahorro", 1500.50));
