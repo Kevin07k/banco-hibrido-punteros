@@ -119,13 +119,24 @@
     };
     if (canvas) {
       matarEn(porCanvas.get(canvas));
-      return;
+    } else {
+      if (timeline) {
+        timeline.kill();
+        timeline = null;
+      }
+      porCanvas.forEach(matarEn);
     }
-    if (timeline) {
-      timeline.kill();
-      timeline = null;
-    }
-    porCanvas.forEach(matarEn);
+    escena.nodos.forEach((n) => {
+      if (n.capa === "arbol" && n.alpha < 1) n.alpha = 1;
+    });
+  }
+
+  function usarLayoutInstantaneo(paso, opts) {
+    if (opts && opts.instantaneo) return true;
+    if (!paso || !paso.casilleros) return false;
+    if (paso.tipo === "vista" || paso.tipo === "merge" || paso.tipo === "encadenar") return true;
+    if (paso.tipo === "fin" || paso.tipo === "hash" || paso.tipo === "lista") return true;
+    return false;
   }
 
   function obtener(canvas) {
@@ -266,6 +277,10 @@
       arbolH = Math.min(100, Math.round(altoSuperior * 0.18));
       mergeH = altoSuperior - arbolH - gap;
     }
+    if (op.expandirArbol) {
+      arbolH = altoSuperior;
+      mergeH = 0;
+    }
 
     const yDer = y0;
     const yMerge = yDer + arbolH + gap;
@@ -285,15 +300,17 @@
         y: yDer,
         w: derW,
         h: arbolH,
-        titulo: "Árbol del balde",
+        titulo: op.expandirArbol ? "Árbol rojo-negro (balde activo)" : "Árbol del balde",
       },
-      merge: {
-        x: derX,
-        y: yMerge,
-        w: derW,
-        h: mergeH,
-        titulo: "Reporte — MergeSort",
-      },
+      merge: mergeH > 0
+        ? {
+            x: derX,
+            y: yMerge,
+            w: derW,
+            h: mergeH,
+            titulo: "Reporte — MergeSort",
+          }
+        : null,
       lista: {
         x: PAD,
         y: yLista,
@@ -309,6 +326,9 @@
   }
   function idArbol(cuenta) {
     return "arbol:" + cuenta;
+  }
+  function idArbolPath(ruta) {
+    return "arbol:" + ruta;
   }
   function idLista(cuenta) {
     return "lista:" + cuenta;
@@ -415,7 +435,10 @@
     if (!raiz || !global.BancoTransicion) return { nodos, aristas, op };
 
     const BT = global.BancoTransicion;
-    const { pos, aristas: ars } = BT.layoutPosiciones(raiz, zona.w, zona.h);
+    const porRuta = !!BT.layoutPosicionesPorRuta;
+    const { pos, aristas: ars } = porRuta
+      ? BT.layoutPosicionesPorRuta(raiz, zona.w, zona.h)
+      : BT.layoutPosiciones(raiz, zona.w, zona.h);
     const pad = 20;
     const bounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
     pos.forEach((p) => {
@@ -439,16 +462,18 @@
 
     const radio = NODE_R * vista.scale;
 
-    pos.forEach((p, cuenta) => {
+    pos.forEach((p, clave) => {
+      const cuenta = porRuta ? p.cuenta : Number(clave);
+      const nodeId = porRuta ? idArbolPath(clave) : idArbol(cuenta);
       const tx = zona.x + p.x * vista.scale + vista.tx;
       const ty = zona.y + p.y * vista.scale + vista.ty;
       const esCur = puntero === cuenta;
       const esPiv = pivot === cuenta;
       const esClave = busqueda === cuenta && !esCur;
       nodos.set(
-        idArbol(cuenta),
+        nodeId,
         crearNodoVisual({
-          id: idArbol(cuenta),
+          id: nodeId,
           capa: "arbol",
           forma: "circulo",
           x: tx,
@@ -469,8 +494,10 @@
     });
 
     ars.forEach(([a, b]) => {
-      const pa = nodos.get(idArbol(a));
-      const pb = nodos.get(idArbol(b));
+      const idA = porRuta ? idArbolPath(a) : idArbol(a);
+      const idB = porRuta ? idArbolPath(b) : idArbol(b);
+      const pa = nodos.get(idA);
+      const pb = nodos.get(idB);
       if (!pa || !pb) return;
       const c = coordsAristaArbol(pa, pb, radio);
       aristas.push({
@@ -709,19 +736,39 @@
 
   function esPasoSoloReporte(paso) {
     if (!paso) return false;
-    return paso.tipo === "merge" || paso.tipo === "fin";
+    if (paso.tipo === "merge" || paso.tipo === "encadenar") return true;
+    const titulo = (paso.titulo || "") + (paso.decision || "");
+    if (
+      paso.tipo === "fin" &&
+      /merge|reporte|fusion|ordenad|inorden|generarReporte/i.test(titulo)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  function esPasoEnfocadoArbol(paso) {
+    return necesitaArbol(paso);
   }
 
   function necesitaArbol(paso) {
     if (!paso || !paso.casilleros) return false;
-    if (esPasoSoloReporte(paso)) return false;
+    if (paso.tipo === "merge") return false;
     return true;
   }
 
   function calcularLayout(paso, ui) {
     const w = logW || 900;
     const h = logH || ALTURA_LOGICA_DEF;
-    const Z = zonas(w, h, { compactarArbol: paso && esPasoSoloReporte(paso) }, modoActual);
+    const Z = zonas(
+      w,
+      h,
+      {
+        compactarArbol: paso && esPasoSoloReporte(paso),
+        expandirArbol: paso && esPasoEnfocadoArbol(paso) && modoActual === "completo",
+      },
+      modoActual
+    );
     const nodos = new Map();
     const aristas = [];
     const tam = ui.tamano || estadoInterno.tamano || 7;
@@ -774,11 +821,11 @@
       rolHermano: paso.rolHermano,
     };
 
-    if (Z.arbol && necesitaArbol(paso) && cas[balde] !== undefined) {
+    if (Z.arbol && necesitaArbol(paso) && cas[balde] != null) {
       const A = layoutArbol(cas[balde], Z.arbol, op);
       A.nodos.forEach((v, k) => nodos.set(k, v));
       aristas.push(...A.aristas);
-    } else if (Z.arbol && m === "arbol" && cas[balde] !== undefined) {
+    } else if (Z.arbol && m === "arbol" && cas[balde] != null) {
       const A = layoutArbol(cas[balde], Z.arbol, op);
       A.nodos.forEach((v, k) => nodos.set(k, v));
       aristas.push(...A.aristas);
@@ -807,12 +854,39 @@
     return { nodos: nodos, aristas, opArbol: op, balde, tam };
   }
 
+  function remapearNodosArbolPorCuenta(targetNodos) {
+    const reclamados = new Set();
+    const porCuenta = new Map();
+    escena.nodos.forEach((n, id) => {
+      if (n.capa === "arbol" && n.cuenta != null) {
+        porCuenta.set(Number(n.cuenta), id);
+      }
+    });
+    targetNodos.forEach((target, newId) => {
+      if (target.capa !== "arbol" || target.cuenta == null || escena.nodos.has(newId)) return;
+      const oldId = porCuenta.get(Number(target.cuenta));
+      if (!oldId || oldId === newId || reclamados.has(oldId)) return;
+      const n = escena.nodos.get(oldId);
+      if (!n) return;
+      escena.nodos.delete(oldId);
+      escena.nodos.set(newId, n);
+      reclamados.add(newId);
+    });
+  }
+
   function aplicarLayoutDirecto(targetNodos, targetAristas, stRef) {
     matarTimeline();
+    remapearNodosArbolPorCuenta(targetNodos);
     escena.aristas = targetAristas;
     const idsActivos = new Set(targetNodos.keys());
     targetNodos.forEach((target, id) => {
-      escena.nodos.set(id, crearNodoVisual(Object.assign({}, target, { alpha: 1 })));
+      let n = escena.nodos.get(id);
+      if (!n) {
+        n = crearNodoVisual(Object.assign({}, target, { alpha: 1 }));
+        escena.nodos.set(id, n);
+      } else {
+        Object.assign(n, target, { alpha: 1 });
+      }
     });
     escena.nodos.forEach((n, id) => {
       if (!idsActivos.has(id)) escena.nodos.delete(id);
@@ -844,12 +918,16 @@
     }
 
     const dur = instant ? 0 : DUR;
+    remapearNodosArbolPorCuenta(targetNodos);
     escena.aristas = targetAristas;
 
     return new Promise((resolve) => {
       timeline = global.gsap.timeline({
         defaults: { ease: "power2.inOut" },
         onComplete: () => {
+          escena.nodos.forEach((n) => {
+            if (n.capa === "arbol") n.alpha = 1;
+          });
           timeline = null;
           porCanvas.forEach((s) => {
             if (s.canvas === canvasEl) {
@@ -916,15 +994,19 @@
 
       escena.nodos.forEach((n, id) => {
         if (!idsActivos.has(id)) {
-          timeline.to(
-            n,
-            {
-              alpha: 0,
-              duration: instant ? 0 : DUR_SALIDA,
-              onComplete: () => escena.nodos.delete(id),
-            },
-            0
-          );
+          if (n.capa === "arbol") {
+            escena.nodos.delete(id);
+          } else {
+            timeline.to(
+              n,
+              {
+                alpha: 0,
+                duration: instant ? 0 : DUR_SALIDA,
+                onComplete: () => escena.nodos.delete(id),
+              },
+              0
+            );
+          }
         }
       });
 
@@ -1023,7 +1105,11 @@
 
   function nodoArbolPorCuenta(cuenta) {
     if (cuenta == null) return null;
-    return escena.nodos.get(idArbol(Number(cuenta))) || null;
+    const c = Number(cuenta);
+    for (const n of escena.nodos.values()) {
+      if (n.capa === "arbol" && Number(n.cuenta) === c) return n;
+    }
+    return escena.nodos.get(idArbol(c)) || null;
   }
 
   function hijosVisuales(nodoPadre) {
@@ -1365,6 +1451,7 @@
       {
         mini: st.diagramaMini,
         compactarArbol: pasoActual && esPasoSoloReporte(pasoActual),
+        expandirArbol: pasoActual && esPasoEnfocadoArbol(pasoActual) && modoActual === "completo",
       },
       modoActual
     );
@@ -1807,8 +1894,14 @@
     prepararCanvas();
     registrarTicker();
 
-    return animarHaciaLayout(nodos, aristas, instant).then(() => {
+    const dibujoInstantaneo = usarLayoutInstantaneo(paso, opts);
+
+    return animarHaciaLayout(nodos, aristas, dibujoInstantaneo).then(() => {
+      escena.nodos.forEach((n) => {
+        if (n.capa === "arbol") n.alpha = 1;
+      });
       syncEstado(st);
+      renderUnCanvas(st);
       if (ui.formulaEl && paso) {
         const BD = global.BancoDoc;
         const clave = paso.cursor ?? paso.busqueda;

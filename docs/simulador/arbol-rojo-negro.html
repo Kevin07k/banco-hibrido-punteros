@@ -50,19 +50,25 @@
     </div>
 
     <div class="tarjeta" style="margin-top:1rem">
-      <h3 style="margin-top:0">Valores a insertar</h3>
+      <h3 style="margin-top:0">Operaciones</h3>
       <div class="fila-form">
         <div style="grid-column: 1 / -1">
-          <label for="secuencia">Cuentas (separadas por coma)</label>
+          <label for="secuencia">Cuentas a insertar (separadas por coma)</label>
           <input type="text" id="secuencia" value="10, 5, 15, 3" />
+        </div>
+        <div>
+          <label for="cuentaEliminar">Cuenta a eliminar</label>
+          <input type="number" id="cuentaEliminar" value="5" min="1" />
         </div>
       </div>
       <div class="grupo-botones">
         <button type="button" class="btn btn-primario" id="btnAnimar">Animar inserción</button>
+        <button type="button" class="btn btn-secundario" id="btnAnimarEliminar">Animar eliminación</button>
         <button type="button" class="btn btn-secundario" id="btnPreset1">Preset: 50, 30, 70</button>
         <button type="button" class="btn btn-secundario" id="btnPreset2">Preset: 10, 20, 30</button>
         <button type="button" class="btn btn-peligro" id="btnLimpiar">Limpiar</button>
       </div>
+      <p id="msgRbt" class="nota" style="margin-bottom:0"></p>
     </div>
   </main>
 
@@ -78,12 +84,17 @@
   <script>
     const BA = window.BancoAnim;
     const BV = window.BancoVista;
+    const BS = window.BancoSerial;
     const canvas = document.getElementById("canvasRbt");
     const inputSecuencia = document.getElementById("secuencia");
+    const inputEliminar = document.getElementById("cuentaEliminar");
+    const msgEl = document.getElementById("msgRbt");
     const ui = { canvas, modo: "arbol", hashEl: null, listaEl: null };
 
     BancoVisualUnificado.init(canvas, { modo: "arbol", alturaLogica: 480 });
 
+    let casilleros = [null];
+    let resultadoPendiente = null;
     let ultimoPaso = null;
 
     const reproductor = new ReproductorVisual({
@@ -92,39 +103,107 @@
         ultimoPaso = paso;
         return BV.aplicarPaso(paso, ui, opts);
       },
+      alTerminar: () => {
+        if (!resultadoPendiente) return;
+        if (resultadoPendiente.casilleros) {
+          casilleros = BS.sincronizarRaices(resultadoPendiente.casilleros);
+        }
+        resultadoPendiente = null;
+      },
     });
 
     function parseSecuencia(txt) {
       return txt.split(/[,;\s]+/).map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
     }
 
-    function animar(txt) {
-      const nums = parseSecuencia(txt);
-      if (!nums.length) return;
-      const r = BA.animarSoloRBT(nums);
-      reproductor.cargarPasos(r.pasos).then(() => reproductor.reproducir());
+    function hayArbol() {
+      return casilleros[0] != null;
     }
 
-    document.getElementById("btnAnimar").onclick = () => animar(inputSecuencia.value);
+    function cargarAnimacion(pasos, resultado) {
+      resultadoPendiente = resultado;
+      BV.reiniciarCanvasAnimacion(ui);
+      const prom = reproductor.cargarPasos(pasos);
+      if (pasos.length) prom.then(() => reproductor.reproducir());
+    }
+
+    function animarInsertar(txt) {
+      const nums = parseSecuencia(txt);
+      if (!nums.length) {
+        msgEl.textContent = "Escribe al menos una cuenta para insertar.";
+        return;
+      }
+      const r = BA.animarSoloRBT(nums);
+      msgEl.textContent = "Reproduce la inserción; al final queda el árbol listo para eliminar.";
+      cargarAnimacion(r.pasos, r);
+    }
+
+    function animarEliminar(cuenta) {
+      if (!hayArbol()) {
+        msgEl.textContent = "Primero inserta valores o carga un preset.";
+        return;
+      }
+      const r = BA.animarEliminarRBT(casilleros, cuenta);
+      msgEl.textContent = r.ok
+        ? `Eliminando ${cuenta} — revisa búsqueda, sucesor y corregirEliminacion.`
+        : `La cuenta ${cuenta} no está en el árbol actual.`;
+      cargarAnimacion(r.pasos, r);
+    }
+
+    document.getElementById("btnAnimar").onclick = () => animarInsertar(inputSecuencia.value);
+    document.getElementById("btnAnimarEliminar").onclick = () => {
+      const cuenta = parseInt(inputEliminar.value, 10);
+      if (isNaN(cuenta)) {
+        msgEl.textContent = "Indica una cuenta válida a eliminar.";
+        return;
+      }
+      animarEliminar(cuenta);
+    };
     document.getElementById("btnPreset1").onclick = () => {
       inputSecuencia.value = "50, 30, 70";
-      animar("50, 30, 70");
+      animarInsertar("50, 30, 70");
     };
     document.getElementById("btnPreset2").onclick = () => {
       inputSecuencia.value = "10, 20, 30";
-      animar("10, 20, 30");
+      animarInsertar("10, 20, 30");
     };
     document.getElementById("btnLimpiar").onclick = () => {
       ultimoPaso = null;
+      casilleros = [null];
+      resultadoPendiente = null;
       reproductor.cargarPasos([]);
       BV.reiniciarCanvasAnimacion(ui);
+      msgEl.textContent = "";
     };
 
     const params = new URLSearchParams(location.search);
     const seq = params.get("seq");
+    const del = params.get("del");
     if (seq) {
       inputSecuencia.value = seq;
-      animar(seq);
+      const nums = parseSecuencia(seq);
+      const r = BA.animarSoloRBT(nums);
+      if (del) {
+        inputEliminar.value = del;
+        const cuentaDel = parseInt(del, 10);
+        const prevFin = reproductor.alTerminar;
+        reproductor.alTerminar = () => {
+          if (resultadoPendiente?.casilleros) {
+            casilleros = BS.sincronizarRaices(resultadoPendiente.casilleros);
+          }
+          resultadoPendiente = null;
+          reproductor.alTerminar = prevFin;
+          animarEliminar(cuentaDel);
+        };
+      }
+      msgEl.textContent = del
+        ? `Insertando y luego eliminará ${del}…`
+        : "Reproduce la inserción; al final queda el árbol listo para eliminar.";
+      cargarAnimacion(r.pasos, r);
+    } else if (del) {
+      inputEliminar.value = del;
+      msgEl.textContent = "Inserta valores primero y luego usa «Animar eliminación».";
+      BV.reiniciarCanvasAnimacion(ui);
     } else {
       BV.reiniciarCanvasAnimacion(ui);
     }

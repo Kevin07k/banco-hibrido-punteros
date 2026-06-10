@@ -236,6 +236,68 @@ select:focus {
   margin: 0.75rem 0;
 }
 
+/* Operaciones manuales — bloques separados (simulador híbrido) */
+.ops-manuales {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.bloque-op {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(15, 20, 25, 0.45);
+}
+
+.bloque-op-titulo {
+  margin: 0 0 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bloque-op--insertar {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.bloque-op--insertar .bloque-op-titulo {
+  color: #7dd3fc;
+}
+
+.bloque-op--eliminar {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.bloque-op--eliminar .bloque-op-titulo {
+  color: var(--warn);
+}
+
+.bloque-op--otros {
+  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.35);
+  background: transparent;
+}
+
+.bloque-op .fila-form {
+  margin-bottom: 0;
+}
+
+.bloque-op .grupo-botones {
+  margin: 0.85rem 0 0;
+}
+
+.bloque-op-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 /* Log / steps */
 .log-pasos {
   font-family: var(--mono);

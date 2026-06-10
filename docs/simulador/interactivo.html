@@ -41,11 +41,18 @@
       <div class="canvas-contenedor canvas-unificado-wrap">
         <canvas id="canvasUnificado" class="canvas-unificado" data-altura-logica="720"></canvas>
       </div>
-      <p class="leyenda">
+      <div class="leyenda">
         <span class="l-rojo">Rojo</span>
-        <span style="margin-left:1rem">Ámbar <strong>actual</strong> → puntero en el árbol</span>
-        <span style="margin-left:1rem">Clic en un casillero del canvas cambia el balde activo</span>
-      </p>
+        <span class="l-negro">Negro</span>
+        <span>Ámbar = actual / V (doble negro)</span>
+        <span>Verde = hijo BST</span>
+        <span>Cian = clave buscada</span>
+        <span>Lila = pivote rotación</span>
+        <span>Rosa = T tío</span>
+        <span>Naranja = H hermano</span>
+        <span>Gris = P padre · A abuelo</span>
+        <span style="margin-left:0.5rem">· Clic en casillero hash → balde activo</span>
+      </div>
       <ul class="leyenda-merge-lista">
         <li><span class="leyenda-cuadro" style="background:#38bdf8"></span> Sublista activa (merge)</li>
         <li><span class="leyenda-cuadro" style="background:#22c55e"></span> Cuenta tomada al fusionar</li>
@@ -79,40 +86,68 @@
     <div class="grid-2" style="margin-top:1rem">
       <section class="tarjeta">
         <h3 style="margin-top:0">Operaciones manuales</h3>
-        <div class="fila-form">
-          <div>
-            <label for="cuenta">Cuenta</label>
-            <input type="number" id="cuenta" value="1001" min="1" />
+
+        <div class="ops-manuales">
+          <div class="bloque-op bloque-op--insertar">
+            <p class="bloque-op-titulo">Insertar y buscar</p>
+            <p class="bloque-op-desc">Datos del cliente y cuenta para alta o consulta en el banco.</p>
+            <div class="fila-form">
+              <div>
+                <label for="cuenta">Cuenta</label>
+                <input type="number" id="cuenta" value="1001" min="1" />
+              </div>
+              <div>
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" value="Carlos Ruiz" />
+              </div>
+              <div>
+                <label for="tipo">Tipo</label>
+                <input type="text" id="tipo" value="Corriente" />
+              </div>
+              <div>
+                <label for="saldo">Saldo</label>
+                <input type="number" id="saldo" value="3200" step="0.01" />
+              </div>
+              <div>
+                <label for="tamHash">Tamaño tabla</label>
+                <select id="tamHash">
+                  <option value="7" selected>7 (demo)</option>
+                  <option value="11">11</option>
+                  <option value="101">101 (proyecto)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grupo-botones">
+              <button type="button" class="btn btn-primario" id="btnInsertar">Insertar (animar)</button>
+              <button type="button" class="btn btn-secundario" id="btnBuscar">Buscar (animar)</button>
+            </div>
           </div>
-          <div>
-            <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" value="Carlos Ruiz" />
+
+          <div class="bloque-op bloque-op--eliminar">
+            <p class="bloque-op-titulo">Eliminar</p>
+            <p class="bloque-op-desc">Solo importa el número de cuenta. Quita el nodo del árbol RBT y de la lista reporte si existe.</p>
+            <div class="fila-form">
+              <div>
+                <label for="cuentaEliminar">Cuenta a eliminar</label>
+                <input type="number" id="cuentaEliminar" value="1001" min="1" />
+              </div>
+            </div>
+            <div class="grupo-botones">
+              <button type="button" class="btn btn-secundario" id="btnEliminar">Eliminar (animar)</button>
+            </div>
           </div>
-          <div>
-            <label for="tipo">Tipo</label>
-            <input type="text" id="tipo" value="Corriente" />
-          </div>
-          <div>
-            <label for="saldo">Saldo</label>
-            <input type="number" id="saldo" value="3200" step="0.01" />
-          </div>
-          <div>
-            <label for="tamHash">Tamaño tabla</label>
-            <select id="tamHash">
-              <option value="7" selected>7 (demo)</option>
-              <option value="11">11</option>
-              <option value="101">101 (proyecto)</option>
-            </select>
+
+          <div class="bloque-op bloque-op--otros">
+            <p class="bloque-op-titulo">Reporte y utilidades</p>
+            <div class="grupo-botones">
+              <button type="button" class="btn btn-secundario" id="btnReporte">Reporte (animar)</button>
+              <button type="button" class="btn btn-secundario" id="btnDemo">Demo Main.java</button>
+              <button type="button" class="btn btn-peligro" id="btnReset">Reiniciar todo</button>
+            </div>
           </div>
         </div>
-        <div class="grupo-botones">
-          <button type="button" class="btn btn-primario" id="btnInsertar">Insertar (animar)</button>
-          <button type="button" class="btn btn-secundario" id="btnBuscar">Buscar (animar)</button>
-          <button type="button" class="btn btn-secundario" id="btnReporte">Reporte (animar)</button>
-          <button type="button" class="btn btn-secundario" id="btnDemo">Demo Main.java</button>
-          <button type="button" class="btn btn-peligro" id="btnReset">Reiniciar todo</button>
-        </div>
-        <p id="msg" class="nota" style="margin-bottom:0"></p>
+
+        <p id="msg" class="nota" style="margin-top:1rem;margin-bottom:0"></p>
       </section>
       <section class="tarjeta">
         <h3 style="margin-top:0">Fórmula</h3>
@@ -249,10 +284,7 @@
         let op = opts || {};
         if (
           paso &&
-          (paso.tipo === "merge" ||
-            paso.tipo === "encadenar" ||
-            paso.tipo === "fin" ||
-            paso.mergeArbol)
+          (paso.tipo === "merge" || paso.tipo === "encadenar" || paso.mergeArbol)
         ) {
           op = Object.assign({}, op, { instantaneo: true });
         }
@@ -322,6 +354,26 @@
       const r = BA.animarBuscar(casilleros, tamano, cuenta);
       el("msg").textContent = r.encontrado ? "Encontrado — revisa el recorrido." : "No encontrado.";
       cargarAnimacion(r.pasos, { ok: false });
+    });
+
+    el("btnEliminar").addEventListener("click", () => {
+      const cuenta = parseInt(el("cuentaEliminar").value, 10);
+      if (isNaN(cuenta)) {
+        el("msg").textContent = "Indica una cuenta válida en «Cuenta a eliminar».";
+        return;
+      }
+      if (!hayClientes()) {
+        el("msg").textContent = "No hay clientes que eliminar.";
+        return;
+      }
+      const r = BA.animarEliminar(casilleros, tamano, cuenta, { listaIds, reporteOrdenado });
+      if (r.ok) {
+        el("msg").textContent =
+          "Reproduce los pasos; al final se aplica la eliminación (hash + árbol + lista si existe).";
+      } else {
+        el("msg").textContent = "Cuenta no encontrada (ver paso final).";
+      }
+      cargarAnimacion(r.pasos, r);
     });
 
     function hayClientes() {

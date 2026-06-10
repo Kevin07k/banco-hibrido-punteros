@@ -62,6 +62,44 @@
     return { pos, aristas: listarAristas(raiz) };
   }
 
+  /** Posiciones con ID estable por ruta (L/R desde la raíz). Sobrevive a intercambiarDatos en eliminación. */
+  function layoutPosicionesPorRuta(raiz, w, h) {
+    const pos = new Map();
+    const aristas = [];
+    if (!raiz) return { pos, aristas };
+
+    const layout = [];
+    function medir(n, depth, xMin, xMax, ruta) {
+      if (!n) return;
+      const mid = (xMin + xMax) / 2;
+      layout.push({ n, x: mid, y: depth, ruta });
+      medir(n.izquierdo, depth + 1, xMin, mid, ruta + "L");
+      medir(n.derecho, depth + 1, mid, xMax, ruta + "R");
+    }
+    medir(raiz, 0, 0, 1, "r");
+    const maxD = Math.max(...layout.map((l) => l.y), 0);
+    const scaleY = maxD > 0 ? (h - M.t - M.b) / maxD : 0;
+
+    layout.forEach(({ n, x, y, ruta }) => {
+      pos.set(ruta, {
+        x: M.l + x * (w - M.l - M.r),
+        y: M.t + y * scaleY,
+        esRojo: n.esRojo,
+        cuenta: n.getCuenta(),
+      });
+    });
+
+    function enlazar(n, ruta) {
+      if (!n) return;
+      if (n.izquierdo) aristas.push([ruta, ruta + "L"]);
+      if (n.derecho) aristas.push([ruta, ruta + "R"]);
+      enlazar(n.izquierdo, ruta + "L");
+      enlazar(n.derecho, ruta + "R");
+    }
+    enlazar(raiz, "r");
+    return { pos, aristas };
+  }
+
   function vistaEncajar(w, h, bounds, margen) {
     const pad = margen == null ? 28 : margen;
     const bw = Math.max(bounds.maxX - bounds.minX, 1);
@@ -540,6 +578,7 @@
     limpiarEstableCanvas,
     clonarRaiz,
     layoutPosiciones,
+    layoutPosicionesPorRuta,
     asignarLayoutANodos,
     vistaEncajar,
     alturaLogicaArbol,

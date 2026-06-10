@@ -210,6 +210,7 @@
     }
     pivot.izquierdo = nodo;
     nodo.padre = pivot;
+    cas[balde] = obtenerRaiz(pivot);
     reg.capturar(cas, {
       titulo: "Rotación completada",
       decision: "Estructura actualizada tras rotarIzquierda",
@@ -239,6 +240,7 @@
     }
     pivot.derecho = nodo;
     nodo.padre = pivot;
+    cas[balde] = obtenerRaiz(pivot);
     reg.capturar(cas, {
       titulo: "Rotación completada",
       decision: "Estructura actualizada tras rotarDerecha",
@@ -499,7 +501,9 @@
       else objetivo.padre.derecho = reemplazo;
     }
     if (reemplazo) reemplazo.padre = objetivo.padre;
-    desengancharNodoAnim(objetivo);
+    objetivo.padre = null;
+    objetivo.izquierdo = null;
+    objetivo.derecho = null;
   }
 
   function corregirEliminacionAnim(nodo, reg, cas, balde) {
@@ -718,19 +722,42 @@
     }
   }
 
-  function eliminarRBTAnim(raiz, cuenta, reg, cas, balde) {
-    const objetivo = buscarNodoAnim(raiz, cuenta, reg, cas, balde);
-    if (!objetivo) {
-      reg.capturar(cas, {
-        titulo: "Eliminar: no encontrado",
-        decision: "La cuenta no está en el árbol",
-        tipo: "error",
-        balde,
-        busqueda: cuenta,
-        punteroEsNulo: true,
-      });
-      return raiz;
+  function desengancharListaAnim(cabeza, cola, objetivo, reg, cas, listaIds, idx) {
+    const cuenta = objetivo.getCuenta();
+    let ant = null;
+    let cur = cabeza;
+    while (cur && cur !== objetivo) {
+      ant = cur;
+      cur = cur.siguiente;
     }
+    if (!cur) return { cabeza, cola, listaIds };
+
+    const sig = cur.siguiente;
+    const nuevosIds = listaIds.filter((id) => id !== cuenta);
+    reg.capturar(cas, {
+      titulo: "ReporteLista.desenganchar",
+      decision: "Quitar eslabón de la lista siguiente",
+      detalle: ant
+        ? `${ant.getCuenta()}.siguiente → ${sig ? sig.getCuenta() : "null"}`
+        : `Cabeza pasa a ${sig ? sig.getCuenta() : "null"}`,
+      tipo: "lista",
+      hashIdx: idx,
+      balde: idx,
+      listaIds: nuevosIds,
+      resaltar: [cuenta],
+      estructura: "lista",
+    });
+
+    if (ant) ant.siguiente = sig;
+    else cabeza = sig;
+    if (!sig) cola = ant;
+    cur.siguiente = null;
+
+    return { cabeza, cola, listaIds: nuevosIds };
+  }
+
+  function eliminarNodoRBTAnim(raiz, objetivo, reg, cas, balde) {
+    const cuenta = objetivo.getCuenta();
 
     reg.capturar(cas, Object.assign(
       {
@@ -816,6 +843,142 @@
       balde,
     });
     return cas[balde];
+  }
+
+  function eliminarRBTAnim(raiz, cuenta, reg, cas, balde) {
+    const objetivo = buscarNodoAnim(raiz, cuenta, reg, cas, balde);
+    if (!objetivo) {
+      reg.capturar(cas, {
+        titulo: "Eliminar: no encontrado",
+        decision: "La cuenta no está en el árbol",
+        tipo: "error",
+        balde,
+        busqueda: cuenta,
+        punteroEsNulo: true,
+      });
+      return raiz;
+    }
+    return eliminarNodoRBTAnim(raiz, objetivo, reg, cas, balde);
+  }
+
+  function animarEliminar(casillerosOrig, tamano, cuenta, estadoReporte) {
+    const cas = BS().clonarCasilleros(casillerosOrig);
+    const reg = new RegistroPasos(tamano);
+    const idx = BD().calcularIndice(cuenta, tamano);
+    const listaIdsPrev =
+      estadoReporte && estadoReporte.listaIds && estadoReporte.listaIds.length
+        ? estadoReporte.listaIds.slice()
+        : [];
+    const reporteGenerado = listaIdsPrev.length > 0;
+    let reporteOrdenado = !!(estadoReporte && estadoReporte.reporteOrdenado);
+
+    reg.capturar(cas, {
+      titulo: "Inicio: BancoEstructura.eliminar",
+      decision: "Estado inicial del banco",
+      detalle: "Orquesta hash → árbol del balde → (opcional) lista siguiente.",
+      tipo: "inicio",
+      hashIdx: -1,
+      balde: 0,
+      listaIds: listaIdsPrev.length ? listaIdsPrev : null,
+    });
+
+    reg.capturar(cas, {
+      titulo: "TablaHash.getRaizPorCuenta",
+      decision: `${cuenta} % ${tamano} = ${idx}`,
+      detalle: `Leer casilleros[${idx}] — raíz del árbol de ese balde.`,
+      tipo: "hash",
+      hashIdx: idx,
+      balde: idx,
+      cursor: cuenta,
+      listaIds: listaIdsPrev.length ? listaIdsPrev : null,
+    });
+
+    const raiz = cas[idx];
+    const objetivo = buscarNodoAnim(raiz, cuenta, reg, cas, idx);
+    if (!objetivo) {
+      reg.capturar(cas, {
+        titulo: "return false",
+        decision: "La cuenta no existe en el banco",
+        tipo: "error",
+        hashIdx: idx,
+        balde: idx,
+        busqueda: cuenta,
+        punteroEsNulo: true,
+      });
+      return { pasos: reg.pasos, ok: false, casilleros: cas, listaIds: listaIdsPrev, reporteOrdenado };
+    }
+
+    let listaIds = listaIdsPrev;
+    let cabezaRep = null;
+    let colaRep = null;
+
+    if (reporteGenerado && listaIds.includes(cuenta)) {
+      cabezaRep = BS().listaDesdeIds(cas, listaIds);
+      colaRep = cabezaRep;
+      while (colaRep && colaRep.siguiente) colaRep = colaRep.siguiente;
+      const ext = desengancharListaAnim(cabezaRep, colaRep, objetivo, reg, cas, listaIds, idx);
+      cabezaRep = ext.cabeza;
+      colaRep = ext.cola;
+      listaIds = ext.listaIds;
+      if (!cabezaRep) reporteOrdenado = false;
+    }
+
+    reg.capturar(cas, {
+      titulo: "ArbolRojoNegro.eliminar",
+      decision: "Borrar nodo y corregirEliminacion si era negro",
+      detalle: "Mismo flujo que ArbolRojoNegro.eliminar en Java.",
+      tipo: "eliminar",
+      hashIdx: idx,
+      balde: idx,
+      listaIds: listaIds.length ? listaIds : null,
+      resaltar: [cuenta],
+    });
+
+    cas[idx] = eliminarNodoRBTAnim(raiz, objetivo, reg, cas, idx);
+
+    reg.capturar(cas, {
+      titulo: "TablaHash.setRaizPorCuenta",
+      decision: `Actualizar casilleros[${idx}]`,
+      detalle: "Tras rotaciones la raíz del balde puede cambiar.",
+      tipo: "fin",
+      hashIdx: idx,
+      balde: idx,
+      listaIds: listaIds.length ? listaIds : null,
+      funcion: "BancoEstructura.eliminar",
+    });
+
+    return {
+      pasos: reg.pasos,
+      ok: true,
+      casilleros: BS().sincronizarRaices(cas),
+      listaIds,
+      reporte: { cabeza: cabezaRep, cola: colaRep },
+      reporteOrdenado,
+    };
+  }
+
+  function animarEliminarRBT(casillerosOrig, cuenta) {
+    const cas = BS().clonarCasilleros(casillerosOrig.length ? casillerosOrig : [null]);
+    const reg = new RegistroPasos(1);
+    const balde = 0;
+
+    reg.capturar(cas, {
+      titulo: "Árbol rojo-negro — eliminar",
+      decision: "Sin tabla hash — un solo balde",
+      detalle: `ArbolRojoNegro.eliminar(${cuenta})`,
+      tipo: "inicio",
+      balde: 0,
+      busqueda: cuenta,
+    });
+
+    const existia = !!BD().buscar(cas[0], cuenta);
+    cas[0] = eliminarRBTAnim(cas[0], cuenta, reg, cas, balde);
+
+    return {
+      pasos: reg.pasos,
+      ok: existia,
+      casilleros: BS().sincronizarRaices(cas),
+    };
   }
 
   function animarSoloEliminarRBT(secuenciaInsertar, cuentaEliminar) {
@@ -1701,7 +1864,9 @@
   global.BancoAnim = {
     animarInsertar,
     animarBuscar,
+    animarEliminar,
     animarSoloRBT,
+    animarEliminarRBT,
     animarSoloEliminarRBT,
     animarReporte,
     animarSoloMergeSort,

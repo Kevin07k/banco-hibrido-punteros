@@ -67,12 +67,20 @@
 
   function esPasoSoloReporte(paso) {
     if (!paso) return false;
-    return paso.tipo === "merge" || paso.tipo === "fin";
+    if (paso.tipo === "merge" || paso.tipo === "encadenar") return true;
+    const titulo = (paso.titulo || "") + (paso.decision || "");
+    if (
+      paso.tipo === "fin" &&
+      /merge|reporte|fusion|ordenad|inorden|generarReporte/i.test(titulo)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   function necesitaArbol(paso) {
     if (!paso || !paso.casilleros) return false;
-    if (esPasoSoloReporte(paso)) return false;
+    if (paso.tipo === "merge") return false;
     return true;
   }
 
